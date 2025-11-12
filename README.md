@@ -4,7 +4,7 @@ Decompilation of Super Mario 2 1998 for the Sega Mega Drive / Sega Genesis
 ## Prerequisites
 You need the verified good dump, `Super Mario 2 1998 (Unl) [!].gen`
 
-You will also need to create a directory name "GFX" in the root of the repo.
+You will also need to create a directory named "GFX" in the root of the repo.
 
 By default, the graphics files are absent in the GFX folder.
 
@@ -21,6 +21,8 @@ The version you need is "vasmm68k_std".
 To compile the ROM, just run this single command in the root of the repo:
 
 * `vasmm68k_std -Fbin main.asm -no-opt -o out.md`
+
+This will build a new file, `out.md`, which you can run in any emulator you want.
 
 ## Sound Driver Z80 code
 By default, the code fed to the Z80 by the sound driver is present in the `z80/` directory, it is decompiled, and already compiled as a binary file in the same folder.
