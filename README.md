@@ -3,7 +3,14 @@ Decompilation of Super Mario 2 1998 for the Sega Mega Drive / Sega Genesis
 
 ## Prerequisites
 You need the verified good dump, `Super Mario 2 1998 (Unl) [!].gen`
-By default, the graphics files are absent in the GFX folder. Luckily, you can extract them from the original ROM yourself, using the python script "extract_gfx" included in the repo. Run `python extract_gfx.py "Super Mario 2 1998 (Unl) [!].gen"` inside the root directory, and it will extract all of the graphics files into `GFX/`.
+
+You will also need to create a directory name "GFX" in the root of the repo.
+
+By default, the graphics files are absent in the GFX folder.
+
+Luckily, you can extract them from the original ROM yourself, using the python script "extract_gfx" included in the repo.
+
+Run `python extract_gfx.py "Super Mario 2 1998 (Unl) [!].gen"` inside the root directory, and it will extract all of the graphics files into `GFX/`.
 
 ## Compiling
 This decompilation was made to work with [Volker Assembler "vasm"](http://sun.hasenbraten.de/vasm/index.php), which is the compiler I'm most comfortable with.
