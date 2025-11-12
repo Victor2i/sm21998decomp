@@ -26,6 +26,7 @@ if (_SP == 0x200) and (_RST == 0xF3660):
 else:
     print("I don't think this is the correct ROM.")
     print("Aborting.")
+    exit()
 
 # here is the list:
 
