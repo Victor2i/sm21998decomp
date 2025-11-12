@@ -12,15 +12,17 @@ You can always use a different compiler as long as it is compatible, but I recom
 The version you need is "vasmm68k_std".
 
 To compile the ROM, just run this single command in the root of the repo:
-`vasmm68k_std -Fbin main.asm -no-opt -o out.md`
+
+* `vasmm68k_std -Fbin main.asm -no-opt -o out.md`
 
 ## Sound Driver Z80 code
 By default, the code fed to the Z80 by the sound driver is present in the `z80/` directory, it is decompiled, and already compiled as a binary file in the same folder.
 If you wish to modify it for testing, you will also need "vasmz80_std".
 
 To compile it, run these two following commands:
-`vasmz80_std -Fbin z80init.asm -o z80init.bin`
-`vasmz80_std -Fbin z80main.asm -o z80main.bin`
+
+* `vasmz80_std -Fbin z80init.asm -o z80init.bin`
+* `vasmz80_std -Fbin z80main.asm -o z80main.bin`
 
 ## Manual of Style
 Upper-case symbols are variable names.
