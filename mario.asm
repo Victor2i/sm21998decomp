@@ -1,0 +1,14550 @@
+; super mario 2
+
+; program defines
+
+.set	P1_BUTTONS_HELD,			0xFF001A
+.set	P1_BUTTONS_PRESSED,			0xFF001C
+.set	P2_BUTTONS_HELD,			0xFF001E
+.set	P2_BUTTONS_PRESSED,			0xFF0020
+.set	PLR_BUTTONS_HELD,			0xFF0022  ;  buttons the current player is holding
+.set	PLR_BUTTONS_PRESSED,		0xFF0024  ;  buttons the current player has pressed
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; title screen and demo
+
+.set	TITLE_DEMO_MODE,			0xFF0038
+.set	TITLE_DEMO_PLAYBACK,		0xFF003A
+.set	TITLE_DEMO_CURRENT,			0xFF003C  ;  which demo to play (1-1/1-2/2-1/2-2)
+.set	TITLE_DEMO_TIMER,			0xFF003E
+.set	TITLE_DEMO_STOP,			0xFF0040
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; gameplay variables
+
+.set	CURR_LEVEL,					0xFF0042
+.set	NEXT_SCREEN_LOAD,			0xFF0044
+.set	SCREEN_PARITY,				0xFF0046
+.set	DO_SCROLLING,				0xFF0048  ;  keeps bg and sprites synced :p
+.set	SCROLL_OFFSET,				0xFF004A
+.set	SCROLL_LOCK,				0xFF004C
+.set	SCREENS_CROSSED,			0xFF004E
+.set	BACKDROP_SCROLL,			0xFF0050
+.set	GLOBAL_TIMER,				0xFF0052
+.set	PLAYER_ACCEL_LEFT,			0xFF0054
+.set	PLAYER_ACCEL_RIGHT,			0xFF0056
+.set	TILE_GROUND,				0xFF0058  ;  holds which block type the player is standing on
+.set	TILE_SIDE,					0xFF005A  ;  holds which block type the player is walking into
+.set	TILE_HIT,					0xFF005C  ;  holds which block type the player has hit
+.set	PLAYER_MOVING,				0xFF005E  ;  used for anims n stuff
+.set	PLAYER_SIZE,				0xFF0060  ;  did mario (or luigi) get the yummy mushroom
+.set	TILE_COLLISION_X,			0xFF0062  ;  if a block is hit, these two variables
+.set	TILE_COLLISION_Y,			0xFF0064  ;   track where the hit occurs
+.set	MVT_POS_X,					0xFF0066  ;  these two are used for where on the screen
+.set	MVT_POS_Y,					0xFF0068  ;   to place the moving tiles
+.set	HIT_TILE_INDEX,				0xFF006A  ;  used to track where in the level data the original block is
+.set	ENTITY_DRIFT,				0xFF006C  ;  how much to move sprites back when scrolling (keeps them synced with bg)
+.set	COIN_BLOCK_TIMER,			0xFF006E  ;  time left before the coin block solidifies
+.set	COIN_BLOCK_SUBTIMER,		0xFF0070  ;  and a frame counter to know when to decrease the previous variable
+.set	PLAYER_COLLIDE_LEFT,		0xFF0072  ;  horizontal pos of left side of player bounding box
+.set	PLAYER_COLLIDE_TOP,			0xFF0074  ;  vertical pos of top side of player bounding box
+.set	PLAYER_COLLIDE_RIGHT,		0xFF0076  ;  horizontal pos of right side of player bounding box
+.set	PLAYER_COLLIDE_BOTTOM,		0xFF0078  ;  vertical pos of bottom side of player bounding box
+.set	ENTITY_COLLIDE_LEFT,		0xFF007A  ;  horizontal pos of left side of enemy bounding box
+.set	ENTITY_COLLIDE_TOP,			0xFF007C  ;  vertical pos of top side of enemy bounding box
+.set	ENTITY_COLLIDE_RIGHT,		0xFF007E  ;  horizontal pos of right side of enemy bounding box
+.set	ENTITY_COLLIDE_BOTTOM,		0xFF0080  ;  vertical pos of bottom side of enemy bounding box
+.set	PLAYER_INTERSECT_ENEMY,		0xFF0082  ;  set whenever the player's bounding box cuts accross the enemy's bounding box
+.set	ENTITY_INDEX,				0xFF0084  ;  tracks which entity to load next
+.set	ENTITY_HEIGHT,				0xFF0086  ;  how many tiles to look ahead for a collision, vertically
+.set	ENTITY_WIDTH,				0xFF0088  ;  how many tiles to look ahead for a collision, horizontally
+.set	PLAYER_FLASHING_SPRITE,		0xFF008C  ;  substitute variable for the player's current sprite when they are flashing
+.set	PLAYER_START_X,				0xFF008E  ;  horizontal start position
+.set	PLAYER_START_Y,				0xFF0090  ;  vertical start position
+.set	PLAYER_COINS,				0xFF0092  ;  how many coins the current player holds
+.set	PLAYER_LIVES,				0xFF0094  ;  how many lives the current player has
+.set	LEVEL_TIMER,				0xFF0096  ;  time left
+.set	STAR_BLINK,					0xFF0098
+.set	STAR_TIMER,					0xFF009A
+.set	PLAYER_START_FIERY,			0xFF009C  ;  did the current player have a fire flower before starting the level
+.set	PLAYER_SWIM,				0xFF00A4  ;  can the player swim in the current level
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; game state variables
+
+.set	GAME_PAUSED,				0xFF0034
+.set	TRANSITION_CONTROL,			0xFF008A
+.set	LEVEL_COMPLETED,			0xFF00A0  ;  set after you've reached the flagpole
+.set	FIGHT_STAGE,				0xFF00A2
+.set	MODE_1P_2P,					0xFF00A6  ;  1 player mode or 2 player mode
+.set	GAME_RESET_TO_TITLE,		0xFF00A8  ;  tells the game to go back to title screen if the player doesn't continue after a game over
+.set	TRANSITION_TIMER,			0xFF00AA
+.set	SPRITE_PALETTE,				0xFF00AC  ;  which palette for sprites is loaded
+.set	LOOP_COMMAND,				0xFF00AE  ;  used in levels such as 4-4 and 7-4
+.set	PRINCESS_RESCUED,			0xFF00B0  ;  set after beating level 8-4
+.set	CUTSCENE_CURRENT_FRAME,		0xFF00B2
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; off-screen player stats
+
+.set	CURR_PLAYER,				0xFF00B4  ;  whose turn is it
+
+.set	STAT_MARIO_SIZE,			0xFF00B6
+.set	STAT_LUIGI_SIZE,			0xFF00B8
+.set	STAT_MARIO_LIVES,			0xFF00BA  ;  how many lives left for mario
+.set	STAT_LUIGI_LIVES,			0xFF00BC  ;  how many lives left for luigi
+.set	STAT_MARIO_LEVEL,			0xFF00BE  ;  which level is mario currently in
+.set	STAT_LUIGI_LEVEL,			0xFF00C0  ;  which level is luigi currently in
+.set	STAT_MARIO_FIERY,			0xFF00C2
+.set	STAT_LUIGI_FIERY,			0xFF00C4
+.set	STAT_MARIO_SCREEN,			0xFF00C6  ;  which screen is mario currently on
+.set	STAT_LUIGI_SCREEN,			0xFF00C8  ;  which screen is luigi currently on
+.set	STAT_MARIO_SCROLL_OFFSET,	0xFF00CA
+.set	STAT_LUIGI_SCROLL_OFFSET,	0xFF00CC
+.set	STAT_MARIO_BACKDROP_OFFSET,	0xFF00CE
+.set	STAT_LUIGI_BACKDROP_OFFSET,	0xFF00D0
+.set	STAT_MARIO_START_X,			0xFF00D2  ;  mario's horizontal start position
+.set	STAT_LUIGI_START_X,			0xFF00D4  ;  luigi's horizontal start position
+.set	STAT_MARIO_START_Y,			0xFF00D6  ;  mario's vertical start position
+.set	STAT_LUIGI_START_Y,			0xFF00D8  ;  luigi's vertical start position
+.set	STAT_MARIO_ENTITY_INDEX,	0xFF00DA
+.set	STAT_LUIGI_ENTITY_INDEX,	0xFF00DC
+.set	STAT_MARIO_COINS,			0xFF00DE  ;  how many coins mario has collected
+.set	STAT_LUIGI_COINS,			0xFF00E0  ;  how many coins luigi has collected
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; other game variables
+
+.set	PLAYER_GAME_OVER,			0xFF00E2  ;  will also trigger the game over screen if current player runs out of lives
+.set	PLAYER_WALKSPEED,			0xFF00E4
+.set	JUMP_HOLD,					0xFF00E6  ;  for how long the jump button has been held
+; 0xFF00E8   ; the game will assign a value to these two variables,
+; 0xFF00EA   ;  but they have no other purpose than existing.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; memory buffers
+
+.set	BUF_PAL_FADE_IN,			0xFF1000
+.set	BUF_PAL_FADE_OUT,			0xFF1080
+.set	BUF_LEVEL_TILES,			0xFF1100  ;  the currently loaded level tiles
+.set	BUF_PLAYER_DIGITS,			0xFF1880  ;  current player score digits
+.set	BUF_MARIO_DIGITS,			0xFF188C  ;  mario's off-screen score digits
+.set	BUF_LUIGI_DIGITS,			0xFF1898  ;  luigi's off-screen score digits
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; memory region for sprites enemies etc
+
+.set	ENTITIES,					0xFF7000
+
+.set	ENTITY_POS_X,				0xFF7000
+.set	ENTITY_POS_Y,				0xFF7002
+.set	ENTITY_SPRITE,				0xFF7004
+
+; slot reserved for player
+.set	PLR_POS_X,					0xFF7140
+.set	PLR_POS_Y,					0xFF7142
+.set	PLR_SPRITE,					0xFF7144
+
+.set	PLR_FIERY,					0xFF7158
+
+.set	PLR_FLASH,					0xFF715A
+.set	PLR_FLASH_COUNTER,			0xFF715B
+.set	PLR_STAR,					0xFF715C
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; controller button bits
+
+.set	CONT_BUTTON_START,	7
+.set	CONT_BUTTON_A,		6
+.set	CONT_BUTTON_C,		5
+.set	CONT_BUTTON_B,		4
+.set	CONT_BUTTON_DR,		3
+.set	CONT_BUTTON_DL,		2
+.set	CONT_BUTTON_DD,		1
+.set	CONT_BUTTON_DU,		0
+
+
+; the code
+
+	.balign 0x100,0xFF
+
+_game_start:
+	move.b reg_version, D0
+	andi.b #0xF, D0
+	beq.b skip_tmss              ; version 0 lacks TMSS
+	move.l #0x53454741, reg_tmss ; write "SEGA" to TMSS reg to unlock VDP
+skip_tmss:
+	move #0x2708, SR
+	nop
+	nop
+	nop
+	move.w #0x8134, vdp_ctrl_port ; mode 5 and vertical interrupts
+	jsr (controller_set_TH).l
+	
+	; A0 and A1 are reserved specifically for VDP communication
+	lea (vdp_data_port).l, A0
+	lea (vdp_ctrl_port).l, A1
+	
+	; load "default" values into the VDP registers
+	lea (vdp_regs_default), A2
+	moveq #0x13, D0
+1:	move.w (A2)+, (A1)
+	dbf D0, 1b
+	
+	; useless dma
+	move.w #0x8F02, (A1)
+	move.w #0x93FF, (A1)
+	move.w #0x94FF, (A1)
+	move.w #0x9780, (A1)
+	move.l #0x40000080, (A1)
+	move.w #0, (A0)
+0:	btst.b #1, 0x1(A1)
+	bne.b 0b
+	
+	; clear pattern area of vram
+	move.w #0x8F02, (A1)
+	move.l #0x40000000, (A1)
+	move.w #0x1000, D0
+1:	move.l #0, (A0)
+	dbf D0, 1b
+	
+	; initialize everything on the hardware
+	jsr (s_init_z80).l
+	jsr (_lab_1FF000).l       ; useless routine
+	jsr (s_load_DAC_driver).l ; load the DAC driver
+	jsr (s_enable_DAC).l      ; then set audio channel 6 to DAC
+	jsr (s_reset_psg).l       ; reset the PSG
+	jsr (clear_ram).l         ; clear ram once... right?
+	jsr (clear_ram).l         ; useless, but just to be sure it's clear - because the first one might have missed a stubborn bit.
+	jsr (clear_vram_layerA).l ; clear vram layers
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+
+load_title_screen:
+; clear a bunch of stuff
+	move.w #0,     PRINCESS_RESCUED
+	move.w #0,     SCREENS_CROSSED
+	move.w #0,     SCROLL_OFFSET
+	move.w #0,     BACKDROP_SCROLL
+	move.w #0,     STAT_MARIO_SCREEN
+	move.w #0,     STAT_MARIO_SCROLL_OFFSET
+	move.w #0,     STAT_MARIO_BACKDROP_OFFSET
+	move.w #0xA0,  STAT_MARIO_START_X         ; mario's starting position
+	move.w #0x130, STAT_MARIO_START_Y         ;  in the first level
+	move.w #0,     STAT_LUIGI_SCREEN
+	move.w #0,     STAT_LUIGI_SCROLL_OFFSET
+	move.w #0,     STAT_LUIGI_BACKDROP_OFFSET
+	move.w #0xA0,  STAT_LUIGI_START_X         ; luigi's starting position
+	move.w #0x128, STAT_LUIGI_START_Y         ;  in the first level
+	move.w #0,     MODE_1P_2P
+	move.w #0,     STAT_MARIO_LEVEL
+	move.w #0,     STAT_LUIGI_LEVEL
+	move.w #0,     ENTITY_INDEX
+	move.w #0,     STAT_MARIO_ENTITY_INDEX
+	move.w #0,     STAT_LUIGI_ENTITY_INDEX
+	move.w #3,     STAT_MARIO_LIVES        ; mario lives start at 3
+	move.w #3,     STAT_LUIGI_LIVES        ; and for luigi as well
+	move.w #0,     STAT_MARIO_SIZE
+	move.w #0,     STAT_LUIGI_SIZE
+	move.w #0,     STAT_MARIO_FIERY
+	move.w #0,     STAT_LUIGI_FIERY
+	move.w #0,     CURR_PLAYER
+	move.w #0,     PLAYER_GAME_OVER
+	move.w #0,     TITLE_DEMO_PLAYBACK
+	move.w #0,     TITLE_DEMO_MODE
+	move.w #0,     0xFF00E8 ; no effect
+	move.w #0,     TITLE_DEMO_TIMER
+	
+	move.w #1, 0xFF6C00 ; play title screen theme
+	jsr (play_music).l
+
+	move #0x2508, SR
+	move.w #1, 0xFF00EA ; no effect
+
+	jsr (show_titlescreen).l
+	jsr (do_palette_fadeout).l
+
+	move.w #0, 0xFF00EA ; no effect
+level_start:
+	cmpi.w #1, TITLE_DEMO_MODE ; are we just doing a demo?
+	beq.w load_room            ; then don't show transition screen and directly load the level
+	
+	jsr (load_curr_player_stats).l
+
+	move.w #0, 0xFF6C00 ; stop music
+	jsr (play_music).l
+
+	jsr (show_transition).l
+	jsr (do_palette_fadeout).l
+
+load_room:
+	lea (level_themes).l, A2   ; load the music theme
+	move.w CURR_LEVEL, D1      ;  for the current level
+	mulu.w #2, D1
+	move.w (A2,D1.w), 0xFF6C00
+	jsr (play_music).l
+	
+	jsr (start_gameplay).l
+	jsr (do_palette_fadeout).l
+	
+	cmpi.w #1, TITLE_DEMO_MODE    ; if it's a demo, just return to title screen
+	beq.w load_title_screen
+	cmpi.w #2, TRANSITION_CONTROL ; check if we entered a room of the current level
+	beq.b load_room               ; in which case directly load into that room
+	cmpi.w #1, PLAYER_GAME_OVER   ; did the player run out of lives?
+	beq.w load_gameover_screen    ; then load the game over screen
+	bra.w switch_players          ; otherwise give the turn to the other player (if we are in 2P mode)
+load_gameover_screen:
+	move.w #10, 0xFF6C00 ; play game over theme
+	jsr (play_music).l
+	
+	jsr (gameover).l
+	jsr (do_palette_fadeout).l
+	
+	cmpi.w #0, GAME_RESET_TO_TITLE
+	beq.w switch_players
+	cmpi.w #0, MODE_1P_2P
+	beq.w load_title_screen
+	move.w #0, MODE_1P_2P
+	move.w #2, PLAYER_GAME_OVER
+switch_players:
+	jsr (save_curr_player_stats).l
+	cmpi.w #1, PRINCESS_RESCUED
+	beq.w load_ending_screen
+	bra.w level_start
+load_ending_screen:
+	move.w #15, 0xFF6C00 ; play ending theme
+	jsr (play_music).l
+	
+	jsr (draw_ending_scene).l
+	jsr (do_palette_fadeout).l
+	
+	bra.w load_title_screen ; now, try again! - princess
+
+load_curr_player_stats:
+	cmpi.w #0, CURR_PLAYER    ; check if mario
+	bne.w load_luigi_stats    ; otherwise load luigi's stats
+	
+	move.w STAT_MARIO_LEVEL,           CURR_LEVEL
+	move.w STAT_MARIO_SIZE,            PLAYER_SIZE
+	move.w STAT_MARIO_LIVES,           PLAYER_LIVES
+	move.w STAT_MARIO_FIERY,           PLAYER_START_FIERY
+	move.w STAT_MARIO_SCREEN,          SCREENS_CROSSED
+	move.w STAT_MARIO_SCROLL_OFFSET,   SCROLL_OFFSET
+	move.w STAT_MARIO_BACKDROP_OFFSET, BACKDROP_SCROLL
+	move.w STAT_MARIO_START_X,         PLAYER_START_X
+	move.w STAT_MARIO_START_Y,         PLAYER_START_Y
+	move.w STAT_MARIO_ENTITY_INDEX,    ENTITY_INDEX
+	move.w STAT_MARIO_COINS,           PLAYER_COINS
+	
+	lea (BUF_PLAYER_DIGITS).l, A2
+	lea (BUF_MARIO_DIGITS).l, A3
+	move.w #5, D2
+1:	move.w (A3)+, (A2)+
+	dbf D2, 1b
+	bra.w 3f
+	
+load_luigi_stats:
+	move.w STAT_LUIGI_LEVEL,           CURR_LEVEL
+	move.w STAT_LUIGI_SIZE,            PLAYER_SIZE
+	move.w STAT_LUIGI_LIVES,           PLAYER_LIVES
+	move.w STAT_LUIGI_FIERY,           PLAYER_START_FIERY
+	move.w STAT_LUIGI_SCREEN,          SCREENS_CROSSED
+	move.w STAT_LUIGI_SCROLL_OFFSET,   SCROLL_OFFSET
+	move.w STAT_LUIGI_BACKDROP_OFFSET, BACKDROP_SCROLL
+	move.w STAT_LUIGI_START_X,         PLAYER_START_X
+	move.w STAT_LUIGI_START_Y,         PLAYER_START_Y
+	move.w STAT_LUIGI_ENTITY_INDEX,    ENTITY_INDEX
+	move.w STAT_LUIGI_COINS,           PLAYER_COINS
+	
+	lea (BUF_PLAYER_DIGITS).l, A2
+	lea (BUF_LUIGI_DIGITS).l, A3
+	move.w #5, D2
+2:	move.w (A3)+, (A2)+
+	dbf D2, 2b
+	bra.w 3f
+	
+3:	rts
+
+save_curr_player_stats:
+	cmpi.w #0, CURR_PLAYER    ; check if mario
+	bne.w save_luigi_stats    ; otherwise save luigi's stats
+	
+	move.w CURR_LEVEL,         STAT_MARIO_LEVEL
+	move.w PLAYER_SIZE,        STAT_MARIO_SIZE
+	move.w PLAYER_LIVES,       STAT_MARIO_LIVES
+	move.w PLAYER_START_FIERY, STAT_MARIO_FIERY
+	move.w SCREENS_CROSSED,    STAT_MARIO_SCREEN
+	move.w SCROLL_OFFSET,      STAT_MARIO_SCROLL_OFFSET
+	move.w BACKDROP_SCROLL,    STAT_MARIO_BACKDROP_OFFSET
+	move.w PLAYER_START_X,     STAT_MARIO_START_X
+	move.w PLAYER_START_Y,     STAT_MARIO_START_Y
+	move.w ENTITY_INDEX,       STAT_MARIO_ENTITY_INDEX
+	move.w PLAYER_COINS,       STAT_MARIO_COINS
+	
+	lea (BUF_PLAYER_DIGITS).l, A2
+	lea (BUF_MARIO_DIGITS).l, A3
+	move.w #5, D2
+1:	move.w (A2)+, (A3)+
+	dbf D2, 1b
+	bra.w stats_check_player_mode
+	
+save_luigi_stats:
+	move.w CURR_LEVEL,         STAT_LUIGI_LEVEL
+	move.w PLAYER_SIZE,        STAT_LUIGI_SIZE
+	move.w PLAYER_LIVES,       STAT_LUIGI_LIVES
+	move.w PLAYER_START_FIERY, STAT_LUIGI_FIERY
+	move.w SCREENS_CROSSED,    STAT_LUIGI_SCREEN
+	move.w SCROLL_OFFSET,      STAT_LUIGI_SCROLL_OFFSET
+	move.w BACKDROP_SCROLL,    STAT_LUIGI_BACKDROP_OFFSET
+	move.w PLAYER_START_X,     STAT_LUIGI_START_X
+	move.w PLAYER_START_Y,     STAT_LUIGI_START_Y
+	move.w ENTITY_INDEX,       STAT_LUIGI_ENTITY_INDEX
+	move.w PLAYER_COINS,       STAT_LUIGI_COINS
+	
+	lea (BUF_PLAYER_DIGITS).l, A2
+	lea (BUF_LUIGI_DIGITS).l, A3
+	move.w #5, D2
+2:	move.w (A2)+, (A3)+
+	dbf D2, 2b
+	bra.w stats_check_player_mode
+	
+stats_check_player_mode:
+	cmpi.w #2, PLAYER_GAME_OVER
+	beq.w swap_players
+	cmpi.w #0, MODE_1P_2P   ; if we are in 1 player mode, skip
+	beq.w swap_players_exit
+swap_players:
+	cmpi.w #0, CURR_PLAYER  ; was it mario?
+	beq.w switch_to_luigi   ; then switch to luigi
+	move.w #0, CURR_PLAYER  ; if not, switch to mario
+	bra.w swap_players_exit
+switch_to_luigi:
+	move.w #1, CURR_PLAYER
+swap_players_exit:
+	move.w #0, PLAYER_GAME_OVER
+	rts
+
+show_titlescreen:
+	move.w #0x9011, (A1) ; tilemap size
+	move.w #0x8406, (A1) ; layer B address (0xC000)
+	move.w #0x8228, (A1) ; layer A address (0xA000)
+	move.w #0x8334, (A1) ; window address (0xD000)
+	move.w #0x8578, (A1) ; sprites table address (0xF000)
+	move.w #0x8D3E, (A1) ; horizontal scrolling address (0xF800)
+	move.w #0x8B00, (A1) ; reset mode reg 3
+	move.w #0x9100, (A1) ; window horizontal position
+	move.w #0x9204, (A1) ; window vertical position
+	move.w #0x8C00, (A1) ; reset mode reg 4
+	move.l #0x40020010, (A1) ; reset layer B vertical scroll
+	move.w #0, (A0)
+	move.l #0x78020003, (A1) ; reset layer B horizontal scroll
+	move.w #0, (A0)
+	move.l #0x40000010, (A1) ; reset layer A vertical scroll
+	move.w #0, (A0)
+	move.l #0x78000003, (A1) ; reset layer A horizontal scroll
+	move.w #0, (A0)
+	move.w #0x8134, (A1) ; disable display
+	jsr (clear_vram_layerA).l
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+	
+	; we technically don't need to load graphics for the character,
+	; but we don't know what's in VRAM at this point,
+	; as such, we will just load in arbitrary graphics.
+	; this avoids garbage showing up on the title screen
+	
+	lea (gfx_mario).l, A2         ; get graphics for small mario
+	cmpi.w #1, PLAYER_SIZE        ; is he tall?
+	bne.w 1f                      ; if not, skip
+	lea (gfx_mario_tall).l, A2    ; otherwise, load graphics for big mario
+	cmpi.w #0, PLAYER_START_FIERY ; is he fiery?
+	beq.w 1f                      ; if not, skip
+	lea (gfx_mario_fire).l, A2    ; otherwise, load graphics for fiery mario
+	
+1:	lea (title_palette).l, A3   ; get title screen palette
+	jsr (load_palette).l        ; and load it
+	
+	lea (gfx_bg_pointers).l, A2 ; load background gfx
+	move.w #0, D1               ; for 1-1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.l #0x60000001, D4 ; copy to 0x6000 in vram
+	move.w #0x1800, D0     ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_title).l, A2  ; load title screen gfx
+	move.l #0x7F200001, D4 ; copy to 0x7F20 in vram
+	move.w #0x1030, D0     ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (level_backgrounds).l, A4 ; load background tilemap
+	move.w #0, D1                 ; for 1-1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0, D1                 ; first screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerB).l
+	
+	; loading the background tilemap for the second screen
+	; is not needed on the title screen
+	;;;;;;;;;;;;;;;;;;;;NOT NEEDED;;;;;;;;;;;;;;;;;;;;
+	lea (level_backgrounds).l, A4
+	move.w #0, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #1, D1                 ; second screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	move.l #0x40400003, D4
+	jsr (copyto_vram).l
+	;;;;;;;;;;;;;;;;;;;;NOT NEEDED;;;;;;;;;;;;;;;;;;;;
+	
+	lea (title_screen).l, A4 ; load title screen tilemap
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerA).l
+	
+	; this next bit of code is also useless,
+	; as it loads the foreground tilemap data for the second screen,
+	; which we never end up seeing on the title screen.
+	;;;;;;;;;;;;;;;;;;;;NOT NEEDED;;;;;;;;;;;;;;;;;;;;
+	lea (tilemaps).l, A4   ; load foreground tilemap
+	move.w #0, D1          ; for 1-1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w SCREENS_CROSSED, D1 ; current screen must be 0
+	addq.w #1, D1          ; add one to get the second screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	move.l #0x60400002, D4
+	jsr (copyto_vram).l
+	;;;;;;;;;;;;;;;;;;;;NOT NEEDED;;;;;;;;;;;;;;;;;;;;
+	
+	jsr (clear_entities).l
+	
+	move.w #0x8174, (A1) ; enable display
+	
+	move.w #0, SCREEN_PARITY
+	move.w #0, TRANSITION_CONTROL
+	move.w #0, SCREEN_PARITY ; accidentally done a second time
+	move.w #0, TITLE_DEMO_TIMER
+	
+	move.w #1, DO_SCROLLING  ; okay, erm... at this point, I'm thinking the title screen
+	jsr (update_scrolling).l ;  was meant to scroll at some point? who knows
+	
+	move.w #0xB8,  0x20+ENTITY_POS_X  ; cursor to select player mode
+	move.w #0x118, 0x20+ENTITY_POS_Y
+	move.w #0xAA,  0x20+ENTITY_SPRITE
+	
+	lea (ENTITIES).l, A6 ; no effect
+	jsr (render_sprites).l
+	jsr (do_palette_fadein).l
+	
+1:	jsr (wait_next_vblank).l
+	jsr (render_sprites).l
+	jsr (read_controlpads).l
+	
+	cmpi.w #1, TRANSITION_CONTROL ; if A, B, C or START was pressed,
+	beq.w 2f                      ;  exit title screen and start the game.
+	
+	addq.w #1, GLOBAL_TIMER
+	jsr (title_cont_input).l
+	jsr (update_scrolling).l ; yep, looks like something was meant to scroll the screen at some point.
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1           ; check if it's an 8th frame
+	bne.b 1b                ; if not, wait for next frame
+	
+	addq.w #1,  TITLE_DEMO_TIMER
+	cmpi.w #40, TITLE_DEMO_TIMER ; without any action from the player, we will load a demo
+	blt.b 1b
+	jsr (load_demo).l
+	
+2:	rts
+
+load_demo:
+	move.w #0, CURR_PLAYER
+	move.w #1, TRANSITION_CONTROL
+	move.w #1, TITLE_DEMO_PLAYBACK
+	move.w #1, TITLE_DEMO_MODE
+	move.w #0, 0xFF00E8 ; no effect
+	move.w #0, TITLE_DEMO_TIMER
+	
+	addq.w #1, TITLE_DEMO_CURRENT
+	cmpi.w #5, TITLE_DEMO_CURRENT
+	blt.w 1f
+	move.w #1, TITLE_DEMO_CURRENT ; play the first demo if the previous one was the last
+	
+1:	lea (demo_levels), A2
+	move.w TITLE_DEMO_CURRENT, D1
+	subq.w #1, D1
+	mulu.w #14, D1
+	move.w (A2,D1.w),    CURR_LEVEL      ; load the level of the current demo
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED ; and its stats
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	rts
+
+demo_levels:
+	.word 0x0000 ; 1-1
+	.word 0
+	.word 0
+	.word 0
+	.word 0x00A0 ; horizontal starting position
+	.word 0x0130 ; vertical starting position
+	.word 0
+
+	.word 0x0001 ; 1-2
+	.word 0
+	.word 0
+	.word 0
+	.word 0x00A0
+	.word 0x0130
+	.word 0
+
+	.word 0x0006 ; 2-1
+	.word 0
+	.word 0
+	.word 0
+	.word 0x00A0
+	.word 0x0130
+	.word 0
+
+	.word 0x0007 ; 2-2
+	.word 0
+	.word 0
+	.word 0
+	.word 0x00A0
+	.word 0x0130
+	.word 0
+
+	.word 0x0009 ; 2-4? (unused)
+	.word 0
+	.word 0
+	.word 0
+	.word 0x0090
+	.word 0x00D0
+	.word 0
+
+title_cont_input:
+	btst.b #CONT_BUTTON_DU, P1_BUTTONS_PRESSED ; is UP pressed?
+	beq.w 1f                                   ; if not, skip
+	cmpi.w #0x118, 0xFF7022                    ; is the cursor on 1P mode?
+	beq.w 1f                                   ; if it is, skip
+	
+	move.w #0x55, 0xFF6C02  ; play the menu select sound
+	jsr (play_sound).l
+	
+	move.w #0x118, 0xFF7022 ; put the cursor next to first option
+	move.w #0, MODE_1P_2P   ; set player mode to 1P
+	
+	cmpi.w #20, TITLE_DEMO_TIMER
+	blt.w 4f
+	move.w #20, TITLE_DEMO_TIMER ; give more time to the player(s) before the demo starts
+	bra.w 4f
+	
+1:	btst.b #CONT_BUTTON_DD, P1_BUTTONS_PRESSED ; is DOWN pressed?
+	beq.w 2f                                   ; if not, skip
+	cmpi.w #0x128, 0xFF7022                    ; is the cursor on 2P mode?
+	beq.w 2f                                   ; if it is, skip
+	
+	move.w #0x55, 0xFF6C02  ; play the menu select sound
+	jsr (play_sound).l
+	
+	move.w #0x128, 0xFF7022 ; put the cursor next to second option
+	move.w #1, MODE_1P_2P   ; set player mode to 2P
+	
+	cmpi.w #20, TITLE_DEMO_TIMER
+	blt.w 4f
+	move.w #20, TITLE_DEMO_TIMER
+	bra.w 4f
+	
+	; check if any of the buttons A, B, C or START are pressed
+2:	btst.b #CONT_BUTTON_C, P1_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_START, P1_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_A, P1_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_B, P1_BUTTONS_PRESSED
+	bne.w 3f
+	bra.w 4f ; if none was pressed, exit
+	
+	; if any of the above buttons were pressed, start the game
+3:	move.w #0x56, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0, TITLE_DEMO_TIMER
+	move.w #1, TRANSITION_CONTROL
+	
+4:	rts
+
+show_transition:
+	move.w #0x9011, (A1) ; tilemap size
+	move.w #0x8406, (A1) ; layer B address (0xC000)
+	move.w #0x8228, (A1) ; layer A address (0xA000)
+	move.w #0x8334, (A1) ; window address (0xD000)
+	move.w #0x8578, (A1) ; sprites table address (0xF000)
+	move.w #0x8D3E, (A1) ; horizontal scrolling address (0xF800)
+	move.w #0x8B00, (A1) ; reset mode reg 3
+	move.w #0x9100, (A1) ; window horizontal position
+	move.w #0x9200, (A1) ; window vertical position
+	move.w #0x8C00, (A1) ; reset mode reg 4
+	move.l #0x40020010, (A1) ; reset layer B vertical scroll
+	move.w #0, (A0)
+	move.l #0x78020003, (A1) ; reset layer B horizontal scroll
+	move.w #0, (A0)
+	move.l #0x40000010, (A1) ; reset layer A vertical scroll
+	move.w #0, (A0)
+	move.l #0x78000003, (A1) ; reset layer A horizontal scroll
+	move.w #0, (A0)
+	move.w #0x8134, (A1) ; disable display
+	jsr (clear_vram_layerA).l
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+	
+	lea (gfx_transition).l, A2       ; load the graphics for this screen
+	
+	lea (pal_transition_mario).l, A3 ; load mario's palette
+	cmpi.w #0, CURR_PLAYER           ; check current player
+	beq.w 1f                         ; if mario, skip
+	lea (pal_transition_luigi).l, A3 ; otherwise load luigi's palette
+1:	jsr (load_palette).l
+
+	lea (gfx_sprites_any).l, A2 ; load graphics with font
+	move.l #0x66000000, D4      ; copy to VRAM 0x2600
+	move.w #0xE80, D0           ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_bg_pointers).l, A2 ; load background gfx
+	move.w #6, D1               ; for 2-1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.l #0x60000001, D4 ; copy to 0x6000 in vram
+	move.w #0x1800, D0     ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (mario_play).l, A4 ; load mario's graphics
+	cmpi.w #0, CURR_PLAYER ; check current player
+	beq.w 2f               ; if mario, skip
+	lea (luigi_play).l, A4 ; otherwise load luigi's graphics
+2:	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerA).l
+	
+	lea (level_backgrounds).l, A4 ; load background tilemap
+	move.w #6, D1                 ; for 2-1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0, D1                 ; first screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerB).l
+	
+	jsr (clear_entities).l
+	
+	move.w #0x8174, (A1) ; enable display
+	move.w #0, TRANSITION_CONTROL
+	move.w #0, TRANSITION_TIMER
+	
+	move.w #0xF0,  0x20+ENTITY_POS_X ; world number
+	move.w #0xB0,  0x20+ENTITY_POS_Y
+	move.w #0x110, 0x40+ENTITY_POS_X ; level number
+	move.w #0xB0,  0x40+ENTITY_POS_Y
+	
+	lea (level_digits).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	move.w (A2,D1.w),    0x20+ENTITY_SPRITE ; world number digit
+	move.w 0x2(A2,D1.w), 0x40+ENTITY_SPRITE ; level number digit
+	
+	move.w #0x110, 0x60+ENTITY_POS_X  ; number of lives
+	move.w #0xC8,  0x60+ENTITY_POS_Y
+	move.w #0x19,  0x60+ENTITY_SPRITE ; put a zero there
+	move.w PLAYER_LIVES, D1           ; get the number of lives
+	add.w D1, 0x60+ENTITY_SPRITE      ; add it to the sprite ID value to display the correct digit
+	
+	lea (ENTITIES).l, A6 ; no effect
+	jsr (render_sprites).l
+	jsr (do_palette_fadein).l
+	
+1:	jsr (wait_next_vblank).l
+	jsr (render_sprites).l   ; not needed
+	jsr (read_controlpads).l
+	
+	cmpi.w #1, TRANSITION_CONTROL
+	beq.w 3f
+	
+	addq.w #1, GLOBAL_TIMER
+	
+	move.b P1_BUTTONS_HELD,    PLR_BUTTONS_HELD    ; get P1's buttons
+	move.b P1_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+	
+	cmpi.w #0, CURR_PLAYER                         ; check current player
+	beq.w 2f                                       ; if it's P1, skip
+	
+	move.b P2_BUTTONS_HELD,    PLR_BUTTONS_HELD    ; otherwise get P2's buttons instead
+	move.b P2_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+	
+	; check if any of the buttons A, B, C or START are pressed
+2:	btst.b #CONT_BUTTON_C, PLR_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_START, PLR_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_A, PLR_BUTTONS_PRESSED
+	bne.w 3f
+	btst.b #CONT_BUTTON_B, PLR_BUTTONS_PRESSED
+	bne.w 3f
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1           ; check if it's an 8th frame
+	bne.w 1b                ; if not, wait for next frame
+	
+	addq.w #1,    TRANSITION_TIMER ; add 1 to the counter
+	cmpi.w #0x30, TRANSITION_TIMER ; has it reached this value?
+	blt.w 1b                       ; if not, keep waiting
+	
+	move.w #0, TRANSITION_TIMER   ; not needed, it's set to 0 before it shows up
+	move.w #1, TRANSITION_CONTROL
+	bra.w 1b
+	
+3:	rts
+
+level_digits:
+	.word 0x1A,0x1A ; 1-1
+	.word 0x1A,0x1B ; 1-2
+	.word 0x1A,0x1A ; 1-1 bonus
+	.word 0x1A,0x1C ; 1-3
+	.word 0x1A,0x1D ; 1-4
+	.word 0x1A,0x1B ; 1-2 bonus
+	.word 0x1B,0x1A ; 2-1
+	.word 0x1B,0x1B ; 2-2
+	.word 0x1B,0x1C ; 2-3
+	.word 0x1B,0x1D ; 2-4
+	.word 0x1C,0x1A ; 3-1
+	.word 0x1C,0x1B ; 3-2
+	.word 0x1C,0x1C ; 3-3
+	.word 0x1C,0x1D ; 3-4
+	.word 0x1D,0x1A ; 4-1
+	.word 0x1D,0x1B ; 4-2
+	.word 0x1D,0x1C ; 4-3
+	.word 0x1D,0x1D ; 4-4
+	.word 0x1E,0x1A ; 5-1
+	.word 0x1E,0x1B ; 5-2
+	.word 0x1E,0x1C ; 5-3
+	.word 0x1E,0x1D ; 5-4
+	.word 0x1F,0x1A ; 6-1
+	.word 0x1F,0x1B ; 6-2
+	.word 0x1F,0x1C ; 6-3
+	.word 0x1F,0x1D ; 6-4
+	.word 0x20,0x1A ; 7-1
+	.word 0x20,0x1B ; 7-2
+	.word 0x20,0x1C ; 7-3
+	.word 0x20,0x1D ; 7-4
+	.word 0x21,0x1A ; 8-1
+	.word 0x21,0x1B ; 8-2
+	.word 0x21,0x1C ; 8-3
+	.word 0x21,0x1D ; 8-4
+	.word 0x21,0x1D
+	.word 0x21,0x1D
+	.word 0x21,0x1D
+	.word 0x21,0x1D
+
+gameover:
+	move.w #0x9011, (A1) ; tilemap size
+	move.w #0x8406, (A1) ; layer B address (0xC000)
+	move.w #0x8228, (A1) ; layer A address (0xA000)
+	move.w #0x8334, (A1) ; window address (0xD000)
+	move.w #0x8578, (A1) ; sprites table address (0xF000)
+	move.w #0x8D3E, (A1) ; horizontal scrolling address (0xF800)
+	move.w #0x8B00, (A1) ; reset mode reg 3
+	move.w #0x9100, (A1) ; window horizontal position
+	move.w #0x9200, (A1) ; window vertical position
+	move.w #0x8C00, (A1) ; reset mode reg 4
+	move.l #0x40020010, (A1) ; reset layer B vertical scroll
+	move.w #0, (A0)
+	move.l #0x78020003, (A1) ; reset layer B horizontal scroll
+	move.w #0, (A0)
+	move.l #0x40000010, (A1) ; reset layer A vertical scroll
+	move.w #0, (A0)
+	move.l #0x78000003, (A1) ; reset layer A horizontal scroll
+	move.w #0, (A0)
+	move.w #0x8134, (A1) ; disable display
+	jsr (clear_vram_layerA).l
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+	
+	lea (gfx_gameover), A2       ; load graphics for this screen
+	
+	lea (pal_gameover_mario), A3 ; load mario's palette
+	cmpi.w #0, CURR_PLAYER       ; check current player
+	beq.w 1f                     ; if it's mario, skip
+	lea (pal_gameover_luigi), A3 ; otherwise load luigi's palette
+1:	jsr (load_palette).l
+
+	lea (gfx_bg_pointers).l, A2 ; load background gfx
+	move.w #1, D1               ; for 1-2
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.l #0x60000001, D4 ; copy to 0x6000 in vram
+	move.w #0x1800, D0     ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (gameover_screen).l, A4 ; load game over screen gfx
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerA).l
+	
+	lea (level_backgrounds).l, A4 ; load background tilemap
+	move.w #1, D1                 ; for 1-2
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0, D1         ; load first screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerB).l ; copy background to layer B
+	
+	jsr (clear_entities).l
+	
+	move.w #0x8174, (A1) ; enable display
+	move.w #0, TRANSITION_CONTROL
+	move.w #0, GAME_RESET_TO_TITLE
+	
+	move.w #0xF0, 0x20+ENTITY_POS_X ; show the countdown digit
+	move.w #0xE0, 0x20+ENTITY_POS_Y
+	move.w #0xB4, 0x20+ENTITY_SPRITE
+	
+	lea (ENTITIES).l, A6 ; no effect
+	jsr (render_sprites).l
+	jsr (do_palette_fadein).l
+	
+1:	jsr (wait_next_vblank).l
+	jsr (render_sprites).l
+	jsr (read_controlpads).l
+	
+	cmpi.w #1, TRANSITION_CONTROL
+	beq.w 2f
+	
+	addq.w #1, GLOBAL_TIMER
+	jsr (continue_countdown).l
+	bra.b 1b
+2:	rts
+
+continue_countdown:
+	; check if any of the buttons A, B, C or START are pressed
+	btst.b #CONT_BUTTON_C, P1_BUTTONS_PRESSED
+	bne.w 1f
+	btst.b #CONT_BUTTON_START, P1_BUTTONS_PRESSED
+	bne.w 1f
+	btst.b #CONT_BUTTON_A, P1_BUTTONS_PRESSED
+	bne.w 1f
+	btst.b #CONT_BUTTON_B, P1_BUTTONS_PRESSED
+	bne.w 1f
+	bra.w 2f
+	
+1:	move.w #1, TRANSITION_CONTROL  ; we will exit the game over screen
+	move.w #3, PLAYER_LIVES        ; give back 3 lives to the player
+	
+	lea (level_worldrestart).l, A2 ; get the first level of the current world
+	move.w CURR_LEVEL, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), CURR_LEVEL
+	
+	lea (level_stats_start).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #0xE, D1
+	
+	move.w (A2,D1.w),    CURR_LEVEL
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	
+2:	move.w GLOBAL_TIMER, D1 ; check if we can count down
+	andi.w #0x3F, D1        ; every 64 frames... heh, it's almost 60 haha
+	bne.w 3f
+	
+	subq.w #1,    0x20+ENTITY_SPRITE ; count down by one
+	cmpi.w #0xAB, 0x20+ENTITY_SPRITE ; check if we've reached zero
+	bge.w 3f                         ; if we haven't underflowed yet, just exit
+	
+	move.w #0xAB, 0x20+ENTITY_SPRITE ; it went below zero so put it back to not render garbage
+	move.w #1, TRANSITION_CONTROL    ; then we exit the game over screen
+	move.w #1, GAME_RESET_TO_TITLE   ; and go back to title screen
+	
+3:	rts
+
+level_worldrestart:
+	.word 0x0000 ; 1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0006 ; 2
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x000A ; 3
+	.word 0x000A
+	.word 0x000A
+	.word 0x000A
+	.word 0x000E ; 4
+	.word 0x000E
+	.word 0x000E
+	.word 0x000E
+	.word 0x0012 ; 5
+	.word 0x0012
+	.word 0x0012
+	.word 0x0012
+	.word 0x0016 ; 6
+	.word 0x0016
+	.word 0x0016
+	.word 0x0016
+	.word 0x001A ; 7
+	.word 0x001A
+	.word 0x001A
+	.word 0x001A
+	.word 0x001E ; 8
+	.word 0x001E
+	.word 0x001E
+	.word 0x001E
+	.word 0x001E
+	.word 0x001E
+	.word 0x001E
+	.word 0x001E
+
+draw_ending_scene:
+	move.w #0x9011, (A1) ; tilemap size
+	move.w #0x8406, (A1) ; layer B address (0xC000)
+	move.w #0x8228, (A1) ; layer A address (0xA000)
+	move.w #0x8334, (A1) ; window address (0xD000)
+	move.w #0x8578, (A1) ; sprites table address (0xF000)
+	move.w #0x8D3E, (A1) ; horizontal scrolling address (0xF800)
+	move.w #0x8B00, (A1) ; reset mode reg 3
+	move.w #0x9100, (A1) ; window horizontal position
+	move.w #0x9200, (A1) ; window vertical position
+	move.w #0x8C00, (A1) ; reset mode reg 4
+	move.l #0x40020010, (A1) ; reset layer B vertical scroll
+	move.w #0, (A0)
+	move.l #0x78020003, (A1) ; reset layer B horizontal scroll
+	move.w #0, (A0)
+	move.l #0x40000010, (A1) ; reset layer A vertical scroll
+	move.w #0, (A0)
+	move.l #0x78000003, (A1) ; reset layer A horizontal scroll
+	move.w #0, (A0)
+	move.w #0x8134, (A1) ; disable display
+	jsr (clear_vram_layerA).l
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+	
+	; load arbitrary graphics to avoid having random crap in VRAM
+	
+	lea (gfx_mario).l, A2         ; get graphics for small mario
+	cmpi.w #1, PLAYER_SIZE        ; is he tall?
+	bne.w 1f                      ; if not, skip
+	lea (gfx_mario_tall).l, A2    ; otherwise, load graphics for big mario
+	cmpi.w #0, PLAYER_START_FIERY ; is he fiery?
+	beq.w 1f                      ; if not, skip
+	lea (gfx_mario_fire).l, A2    ; otherwise, load graphics for fiery mario
+	
+1:	lea (pal_ending_mario).l, A3 ; load mario's palette
+	cmpi.w #0, CURR_PLAYER       ; check current player
+	beq.w 2f                     ; if it's mario, skip
+	lea (pal_ending_luigi).l, A3 ; otherwise load luigi's palette
+2:	jsr (load_palette).l
+	
+	; useless
+	lea (gfx_sprites_any).l, A2 ; load graphics with font
+	move.l #0x66000000, D4      ; copy to VRAM 0x2600
+	move.w #0xE80, D0           ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_ending).l, A2 ; load graphics for the ending scene
+	move.l #0x60000001, D4 ; copy to VRAM 0x6000
+	move.w #0x1280, D0     ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	move.w #0x1F, D1
+	move.w #0x1F, D2
+	move.l #0x60000002, D4
+	jsr (clear_one_screen).l
+	
+	lea (end1).l, A4       ; load first frame
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	jsr (clear_entities).l
+	
+	move.w #0x8174, (A1) ; enable display
+	move.w #0, TRANSITION_CONTROL
+	move.w #0, CUTSCENE_CURRENT_FRAME
+	
+	lea (ENTITIES).l, A6 ; no effect
+	jsr (render_sprites).l
+	jsr (do_palette_fadein).l
+	
+1:	jsr (wait_next_vblank).l
+	jsr (render_sprites).l
+	jsr (read_controlpads).l
+	
+	cmpi.w #1, TRANSITION_CONTROL ; we don't need to check this
+	beq.w 2f                      ;
+	
+	addq.w #1, GLOBAL_TIMER
+	jsr (draw_cutscene_frame).l
+	btst.b #CONT_BUTTON_START, P1_BUTTONS_PRESSED ; check if START is pressed
+	beq.b 1b                                      ; if not, keep waiting
+	
+2:	rts
+
+draw_cutscene_frame:
+	cmpi.w #0, CUTSCENE_CURRENT_FRAME ; is current image the 1st?
+	bne.w 1f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end2).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #1, CUTSCENE_CURRENT_FRAME ; next image will be the 2nd
+	bra.w 9f
+	
+1:	cmpi.w #1, CUTSCENE_CURRENT_FRAME ; is current image the 2nd?
+	bne.w 2f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1           
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end3).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #2, CUTSCENE_CURRENT_FRAME ; next image will be the 3rd
+	bra.w 9f
+	
+2:	cmpi.w #2, CUTSCENE_CURRENT_FRAME ; is current image the 3rd?
+	bne.w 3f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1           
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end4).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #3, CUTSCENE_CURRENT_FRAME ; next image will be the 4th
+	bra.w 9f
+	
+3:	cmpi.w #3, CUTSCENE_CURRENT_FRAME ; is current image the 4th?
+	bne.w 4f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1           
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end5).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #4, CUTSCENE_CURRENT_FRAME ; next image will be the 5th
+	bra.w 9f
+	
+4:	cmpi.w #4, CUTSCENE_CURRENT_FRAME ; is current image the 5th?
+	bne.w 5f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1           
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end6).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #5, CUTSCENE_CURRENT_FRAME ; next image will be the 6th
+	bra.w 9f
+	
+5:	cmpi.w #5, CUTSCENE_CURRENT_FRAME ; is current image the 6th?
+	bne.w 6f                          ; if not, skip
+	
+	move.w GLOBAL_TIMER, D1           
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	lea (end7).l, A4
+	move.w #0xC, D1
+	move.w #0x9, D2
+	move.l #0x64100002, D4 ; copy to VRAM 0xA410,
+	jsr (copyto_vram).l    ;  thus the first tile will be at (8,8)
+	
+	move.w #4, CUTSCENE_CURRENT_FRAME ; next image will be the 5th, thus creating a loop between images 5 and 6.
+	bra.w 9f
+	
+6:	cmpi.w #6, CUTSCENE_CURRENT_FRAME
+	bne.w 9f
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #0xF, D1                   ; wait for 16th frame
+	bne.w 9f
+	
+	move.w #0, CUTSCENE_CURRENT_FRAME ; restart anim
+	bra.w 9f
+	
+7:	cmpi.w #7, CUTSCENE_CURRENT_FRAME ; unused
+	bne.w 8f
+	bra.w 9f
+	
+8:	cmpi.w #8, CUTSCENE_CURRENT_FRAME ; unused
+	bne.w 9f
+	bra.w 9f
+	
+9:	rts
+
+level_themes:
+	.word 0x02 ; 1-1
+	.word 0x03 ; 1-2
+	.word 0x05 ; 1-1 bonus
+	.word 0x02 ; 1-3
+	.word 0x07 ; 1-4
+	.word 0x05 ; 1-2 bonus
+	.word 0x02 ; 2-1
+	.word 0x04 ; 2-2
+	.word 0x02 ; 2-3
+	.word 0x07 ; 2-4
+	.word 0x02 ; 3-1
+	.word 0x02 ; 3-2
+	.word 0x02 ; 3-3
+	.word 0x07 ; 3-4
+	.word 0x02 ; 4-1
+	.word 0x03 ; 4-2
+	.word 0x02 ; 4-3
+	.word 0x07 ; 4-4
+	.word 0x02 ; 5-1
+	.word 0x02 ; 5-2
+	.word 0x02 ; 5-3
+	.word 0x07 ; 5-4
+	.word 0x02 ; 6-1
+	.word 0x02 ; 6-2
+	.word 0x02 ; 6-3
+	.word 0x07 ; 6-4
+	.word 0x02 ; 7-1
+	.word 0x04 ; 7-2
+	.word 0x02 ; 7-3
+	.word 0x07 ; 7-4
+	.word 0x02 ; 8-1
+	.word 0x02 ; 8-2
+	.word 0x02 ; 8-3
+	.word 0x03 ; 8-4 (1)
+	.word 0x03 ; 8-4 (2)
+	.word 0x03 ; 8-4 (3)
+	.word 0x04 ; 8-4 (4)
+	.word 0x07 ; 8-4 (5)
+
+;unused data?
+	.word 0x02
+	.word 0x02
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+	.word 0x01
+
+lock_scrolling:
+	.word 0 ; 1-1
+	.word 0 ; 1-2
+	.word 1 ; 1-1 bonus
+	.word 0 ; 1-3
+	.word 0 ; 1-4
+	.word 1 ; 1-2 bonus
+	.word 0 ; 2-1
+	.word 0 ; 2-2
+	.word 0 ; 2-3
+	.word 0 ; 2-4
+	.word 0 ; 3-1
+	.word 0 ; 3-2
+	.word 0 ; 3-3
+	.word 0 ; 3-4
+	.word 0 ; 4-1
+	.word 0 ; 4-2
+	.word 0 ; 4-3
+	.word 0 ; 4-4
+	.word 0 ; 5-1
+	.word 0 ; 5-2
+	.word 0 ; 5-3
+	.word 0 ; 5-4
+	.word 0 ; 6-1
+	.word 0 ; 6-2
+	.word 0 ; 6-3
+	.word 0 ; 6-4
+	.word 0 ; 7-1
+	.word 0 ; 7-2
+	.word 0 ; 7-3
+	.word 0 ; 7-4
+	.word 0 ; 8-1
+	.word 0 ; 8-2
+	.word 0 ; 8-3
+	.word 0 ; 8-4 (1)
+	.word 0 ; 8-4 (2)
+	.word 0 ; 8-4 (3)
+	.word 0 ; 8-4 (4)
+	.word 0 ; 8-4 (5)
+	.word 0 ; unused
+	.word 0 ; unused
+
+start_gameplay:
+	move.w #0x9011, (A1) ; tilemap size
+	move.w #0x8406, (A1) ; layer B address (0xC000)
+	move.w #0x8228, (A1) ; layer A address (0xA000)
+	move.w #0x8334, (A1) ; window address (0xD000)
+	move.w #0x8578, (A1) ; sprites table address (0xF000)
+	move.w #0x8D3E, (A1) ; horizontal scrolling address (0xF800)
+	move.w #0x8B00, (A1) ; reset mode reg 3
+	move.w #0x9100, (A1) ; window horizontal position
+	move.w #0x9204, (A1) ; window vertical position
+	move.w #0x8C00, (A1) ; reset mode reg 4
+	move.l #0x40020010, (A1) ; reset layer B vertical scroll
+	move.w #0, (A0)
+	move.l #0x78020003, (A1) ; reset layer B horizontal scroll
+	move.w #0, (A0)
+	move.l #0x40000010, (A1) ; reset layer A vertical scroll
+	move.w #0, (A0)
+	move.l #0x78000003, (A1) ; reset layer A horizontal scroll
+	move.w #0, (A0)
+	move.w #0x8134, (A1) ; disable display
+	jsr (clear_vram_layerA).l
+	jsr (clear_vram_layerB).l
+	jsr (clear_vram_layerW).l
+	
+	cmpi.w #1, CURR_PLAYER        ; check which player
+	beq.w 2f                      ; if it's luigi, branch to load his graphics
+	lea (gfx_mario).l, A2         ; get graphics for small mario
+	cmpi.w #1, PLAYER_SIZE        ; is he tall?
+	bne.w 1f                      ; if not, skip
+	lea (gfx_mario_tall).l, A2    ; otherwise, load graphics for big mario
+	cmpi.w #0, PLAYER_START_FIERY ; is he fiery?
+	beq.w 1f                      ; if not, skip
+	lea (gfx_mario_fire).l, A2    ; otherwise, load graphics for fiery mario
+	
+1:	lea (level_palettes).l, A3 ; load palette
+	move.w CURR_LEVEL, D1      ;  for the current level
+	mulu.w #4, D1
+	movea.l (A3,D1.w), A3
+	jsr (load_palette).l
+	bra.w 4f
+	
+2:	lea (gfx_luigi).l, A2         ; get graphics for small luigi
+	cmpi.w #1, PLAYER_SIZE        ; is he tall?
+	bne.w 3f                      ; if not, skip
+	lea (gfx_luigi_tall).l, A2    ; otherwise, load graphics for big luigi
+	cmpi.w #0, PLAYER_START_FIERY ; is he fiery?
+	beq.b 1b                      ; if not, skip
+	lea (gfx_mario_fire).l, A2    ; otherwise, load graphics for fiery luigi (which is the same as fiery mario)
+	
+	; they sort of messed up the branching, and the same bit of code is present twice.
+	; this can be optimized.
+	
+3:	lea (level_palettes).l, A3 ; load palette
+	move.w CURR_LEVEL, D1      ;  for the current level
+	mulu.w #4, D1
+	movea.l (A3,D1.w), A3
+	jsr (load_palette).l
+	
+	; the following code copies graphics to VRAM,
+	; but it does so by copying a certain amount of data
+	; that so happens to be the size of the largest graphics files.
+	; as such, there's some "reserved" space for some specific types of graphics.
+	
+4:	lea (gfx_sprite_pointers).l, A2 ; look at which sprite graphics this level uses
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2           ; get the address of these graphics
+	move.l #0x4CE00000, D4          ; copy to VRAM 0xCE0 (the player's graphics stop there)
+	move.w #0x640, D0               ; we don't care about copying too much, but we stop at 0x2600
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_sprites_any).l, A2 ; load graphics with font
+	move.l #0x66000000, D4      ; copy to VRAM 0x2600 (sprite graphics stop there)
+	move.w #0xE80, D0
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_bg_pointers).l, A2 ; load background graphics for the current level
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.l #0x60000001, D4      ; copy to VRAM 0x6000 (sprite graphics stop there)
+	move.w #0x1800, D0          ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_moving_tiles).l, A2 ; load moving tiles graphics for the current level
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.l #0x51400002, D4      ; copy to VRAM 0x9140
+	move.w #0x60, D0
+	jsr (copyto_vdp_mem).l
+	
+	lea (gfx_springprincess).l, A2 ; load graphics for the "spring" and "princess" objects
+	move.l #0x52C00002, D4         ; copy to VRAM 0x92C0
+	move.w #0xD18, D0              ; we don't care about copying too much
+	jsr (copyto_vdp_mem).l
+	
+	lea (level_backgrounds).l, A4 ; load background tilemap
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0, D1                 ; get tilemap for the first screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerB).l
+	
+	lea (level_backgrounds).l, A4
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #1, D1                 ; get tilemap for the second screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	move.l #0x40400003, D4        ; second screen of layer B
+	jsr (copyto_vram).l
+	
+	lea (tilemaps).l, A4       ; load foreground tilemap
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	move.w SCREENS_CROSSED, D1 ; for first screen
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	jsr (copyto_layerA).l
+	
+	lea (tilemaps).l, A4
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	move.w SCREENS_CROSSED, D1 ; for second screen
+	addq.w #1, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	move.l #0x60400002, D4     ; second screen of layer A
+	jsr (copyto_vram).l
+	
+	lea (leveltiles).l, A2 ; load level layout
+	move.w CURR_LEVEL, D1  ;  for the current level
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w SCREENS_CROSSED, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	lea (BUF_LEVEL_TILES).l, A3
+	move.w #0x1D, D2
+1:	move.w #0x1F, D1
+2:	move.b (A2)+, (A3)+
+	dbf D1, 2b
+	adda.l #0x20, A3 ; skip odd lines which are used for the other screen
+	dbf D2, 1b
+	
+	lea (leveltiles).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w SCREENS_CROSSED, D1
+	addq.w #1, D1          ; now get the next screen
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	lea (BUF_LEVEL_TILES).l, A3
+	adda.l #0x20, A3       ; start on odd lines
+	move.w #0x1D, D2
+1:	move.w #0x1F, D1
+2:	move.b (A2)+, (A3)+
+	dbf D1, 2b
+	adda.l #0x20, A3 ; skip even lines which are used for the other screen
+	dbf D2, 1b
+	
+	jsr (clear_entities).l
+	
+	move.w #0x8174, (A1) ; enable rendering
+	
+	; screen parity is set to 0, however that prevents us
+	; from loading a level where the player starts on a screen that is odd.
+	move.w #0, SCREEN_PARITY
+	
+	; check if current level is an underwater level
+	cmpi.w #0x7, CURR_LEVEL  ; 2-2
+	beq.w 1f
+	cmpi.w #0x1B, CURR_LEVEL ; 7-2
+	beq.w 1f
+	cmpi.w #0x24, CURR_LEVEL ; 8-4 underwater
+	beq.w 1f
+	move.w #0, PLAYER_SWIM   ; otherwise disable swimming
+	bra.w 2f
+	
+1:	move.w #1, PLAYER_SWIM   ; enable swimming
+
+2:	move.w PLAYER_START_X, PLR_POS_X ; set the position
+	move.w PLAYER_START_Y, PLR_POS_Y ;  for the player's sprite
+	
+	cmpi.w #1, PLAYER_SIZE ; check if the player is tall
+	beq.w 3f               ; skip in this case
+	addq.w #8, PLR_POS_Y   ; otherwise the player is slightly smaller, put them closer to the ground
+	
+3:	move.w #0x24, PLR_SPRITE      ; idle sprite for small mario/luigi
+	cmpi.w #0, PLAYER_SIZE        ; check its size
+	beq.w 4f                      ; if small, skip
+	move.w #0x1, PLR_SPRITE       ; otherwise use idle sprite for big mario/luigi
+	cmpi.w #0, PLAYER_START_FIERY ; check if they're fiery
+	beq.w 4f                      ; if not, skip
+	move.b #1, PLR_FIERY          ; otherwise give the fire power to the player
+	
+	; now clear a bunch of gameplay variables
+4:	move.w #0,   COIN_BLOCK_TIMER
+	move.w #0,   COIN_BLOCK_SUBTIMER
+	move.w #0,   TRANSITION_CONTROL
+	move.w #0,   LEVEL_COMPLETED
+	move.w #400, LEVEL_TIMER
+	move.w #0,   STAR_TIMER
+	move.w #0,   FIGHT_STAGE
+	move.w #0,   GAME_PAUSED
+	move.w #0,   SCREEN_PARITY       ; it's like we didn't clear that one earlier, didn't we?
+	move.w #0,   GLOBAL_TIMER
+	move.w #0,   LOOP_COMMAND
+	move.w #0,   PLAYER_WALKSPEED
+	
+	lea (lock_scrolling).l, A2    ; there are two levels in the game,
+	move.w CURR_LEVEL, D1         ;  which are the bonus rooms (1-1 bonus and 1-2 bonus)
+	mulu.w #2, D1                 ;   since they're only 1 screen long,
+	move.w (A2,D1.w), SCROLL_LOCK ;    we'll just lock the scrolling for these levels in particular.
+	
+	move.w #1, DO_SCROLLING
+	jsr (update_scrolling).l
+	
+	lea (ENTITIES).l, A6 ; no effect
+	jsr (render_sprites).l    ; makes sprites visible during fade in
+	jsr (do_palette_fadein).l
+	
+1:	jsr (wait_next_vblank).l
+	jsr (render_sprites).l
+	jsr (read_controlpads).l
+	
+	cmpi.w #0, TRANSITION_CONTROL ; check if we are warping to another level
+	bne.w 9f                      ; in which case, exit
+	
+	addq.w #1, GLOBAL_TIMER
+	cmpi.w #1, GAME_PAUSED  ; check if the game is paused
+	beq.w 5f                ; in which case, skip all game logic n stuff
+	
+	jsr (_lab_1D7A).l
+	cmpi.w #0, TRANSITION_CONTROL
+	bne.w 9f
+	
+	jsr (_lab_CB86).l
+	jsr (_lab_3AEA).l
+	jsr (_lab_4642).l
+	jsr (_lab_78E0).l
+	jsr (_lab_3DD0).l
+	jsr (_lab_CDD4).l
+	jsr (_lab_C36C).l
+	jsr (_lab_3390).l
+	jsr (_lab_2F84).l
+	jsr (_lab_CECA).l
+	jsr (update_scrolling).l
+	
+	cmpi.w #0, LEVEL_COMPLETED
+	bne.w 4f
+	
+	cmpi.w #9, 0xFF7148
+	beq.w 4f
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #0x1F, D1        ; 32nd frame
+	bne.w 4f                ; if not, skip
+	subq.w #1, LEVEL_TIMER  ; decrease level timer
+	cmpi.w #0, LEVEL_TIMER  ; has it reached zero?
+	bge.w 2f                ; if not, skip and do other checks on level timer
+	move.w #0, LEVEL_TIMER  ; it can underflow so put it back to 0
+	move.w #9, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	bra.w 4f
+	
+2:	cmpi.w #99, LEVEL_TIMER
+	bne.w 3f
+	move.w #0xB, 0xFF6C00    ; play the hurry sound
+	jsr (play_music).l
+3:	cmpi.w #94, LEVEL_TIMER  ; should be done playing
+	bne.w 4f
+	lea (level_themes).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), 0xFF6C00 ; put the music back
+	jsr (play_music).l
+	
+4:	cmpi.w #1, COIN_BLOCK_TIMER
+	ble.w 5f
+	jsr (_lab_4620).l
+	
+5:	move.b P1_BUTTONS_HELD,    PLR_BUTTONS_HELD    ; get buttons for P1
+	move.b P1_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+	cmpi.w #0, CURR_PLAYER                         ; check current player
+	beq.w 6f                                       ; skip if it's P1
+	move.b P2_BUTTONS_HELD,    PLR_BUTTONS_HELD    ; get buttons for P2
+	move.b P2_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+	
+6:	cmpi.w #2, FIGHT_STAGE ; have we rescued a retainer?
+	beq.w 8f               ; in which case, ignore button input
+	
+	btst.b #CONT_BUTTON_START, PLR_BUTTONS_PRESSED ; is the START button pressed?
+	beq.w 8f                                       ; if not, skip
+	
+	move.w #0x5C, 0xFF6C02      ; play the pause sound
+	jsr (play_sound).l
+	cmpi.w #1, GAME_PAUSED      ; is the game already paused?
+	beq.w 7f                    ; then unpause it
+	move.w #1, GAME_PAUSED      ; pause the game
+	move.w #0xE8, ENTITY_POS_X  ; put it at the center of the screen
+	move.w #0xF0, ENTITY_POS_Y
+	move.w #0xBE, ENTITY_SPRITE ; first frame of the "PAUSE" sprite
+	bra.w 1b
+	
+7:	move.w #0, GAME_PAUSED   ; unpause the game
+	move.w #0, ENTITY_SPRITE ; clear the "PAUSE" sprite
+	bra.w 1b
+	
+8:	cmpi.w #1, GAME_PAUSED
+	bne.w 1b
+	
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1           ; 8th frame
+	bne.w cheat             ; if not, skip
+	
+	addq.w #1, ENTITY_SPRITE    ; next sprite
+	cmpi.w #0xC3, ENTITY_SPRITE ; check if it was the last sprite
+	ble.w cheat
+	move.w #0xBE, ENTITY_SPRITE ; put the first sprite back
+	
+cheat: ; secret cheat to skip levels ;)
+	btst.b #CONT_BUTTON_DD, PLR_BUTTONS_HELD   ; is DOWN button held?
+	beq.w 1b
+	btst.b #CONT_BUTTON_C, PLR_BUTTONS_PRESSED ; is C button pressed?
+	beq.w 1b
+	btst.b #CONT_BUTTON_A, PLR_BUTTONS_PRESSED ; is A button NOT pressed?
+	bne.w 1b
+	jsr (load_next_level).l
+	
+9:	rts
+
+_lab_1D7A:
+	move.w #0, PLAYER_ACCEL_LEFT
+	move.w #0, PLAYER_ACCEL_RIGHT
+	move.w #0, PLAYER_MOVING
+	move.b P1_BUTTONS_HELD, PLR_BUTTONS_HELD
+	move.b P1_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+	cmpi.w #0, CURR_PLAYER
+	beq.w _lab_1DC6
+	move.b P2_BUTTONS_HELD, PLR_BUTTONS_HELD
+	move.b P2_BUTTONS_PRESSED, PLR_BUTTONS_PRESSED
+_lab_1DC6:
+	cmpi.w #0, LEVEL_COMPLETED
+	bne.w _lab_2442
+	cmpi.w #2, FIGHT_STAGE
+	beq.w _lab_244C
+	cmpi.w #7, 0xFF7148
+	beq.w _lab_246C
+	cmpi.w #10, 0xFF7148
+	beq.w _lab_2370
+	cmpi.w #9, 0xFF7148
+	beq.w _lab_2370
+	btst.b #CONT_BUTTON_DL, PLR_BUTTONS_HELD
+	beq.w _lab_1E12
+	bra.w _lab_1E66
+_lab_1E12:
+	cmpi.w #0, PLAYER_WALKSPEED
+	beq.w _lab_1F70
+	cmpi.w #1, 0xFF714E
+	bne.w _lab_1F70
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_1E5A
+	btst.b #CONT_BUTTON_DR, PLR_BUTTONS_HELD
+	bne.w _lab_1F70
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_1EAE
+	subq.w #1, PLAYER_WALKSPEED
+	bra.w _lab_1EAE
+_lab_1E5A:
+	btst.b #CONT_BUTTON_DR, PLR_BUTTONS_HELD
+	bne.w _lab_1F70
+_lab_1E66:
+	cmpi.w #0, PLAYER_WALKSPEED
+	bne.w _lab_1E7E
+	move.w #1, PLAYER_WALKSPEED
+	bra.w _lab_1E9E
+_lab_1E7E:
+	move.w GLOBAL_TIMER, D1
+	andi.w #0xF, D1
+	bne.w _lab_1E9E
+	cmpi.w #2, PLAYER_WALKSPEED
+	bge.w _lab_1E9E
+	addq.w #1, PLAYER_WALKSPEED
+_lab_1E9E:
+	move.w #1, PLAYER_MOVING
+	move.w #1, PLAYER_ACCEL_LEFT
+_lab_1EAE:
+	cmpi.w #1, 0xFF714E
+	beq.w _lab_1ED2
+	move.w #1, 0xFF714E
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+_lab_1ED2:
+	jsr (_lab_C468).l
+	cmpi.w #0xD, TILE_SIDE
+	beq.w _lab_212C
+	cmpi.w #0x8, TILE_SIDE
+	beq.w _lab_20FE
+	cmpi.w #0x11, TILE_SIDE
+	bge.w _lab_1F0C
+	cmpi.w #0, TILE_SIDE
+	bne.w _lab_1F34
+	bra.w _lab_1F18
+_lab_1F0C:
+	move.w TILE_SIDE, D1
+	jsr (_lab_2682).l
+_lab_1F18:
+	cmpi.w #0x88, PLR_POS_X
+	ble.w _lab_1F34
+	move.w PLAYER_WALKSPEED, D1
+	sub.w D1, PLR_POS_X
+	bra.w _lab_1F3C
+_lab_1F34:
+	move.w #0, PLAYER_WALKSPEED
+_lab_1F3C:
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_21D6
+	cmpi.w #1, 0xFF7148
+	beq.w _lab_21D6
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF7148
+	bra.w _lab_21D6
+_lab_1F70:
+	btst.b #CONT_BUTTON_DR, PLR_BUTTONS_HELD
+	beq.w _lab_1F80
+	bra.w _lab_1FB0
+_lab_1F80:
+	cmpi.w #0, PLAYER_WALKSPEED
+	beq.w _lab_215E
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_1FB0
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_1FF8
+	subq.w #1, PLAYER_WALKSPEED
+	bra.w _lab_1FF8
+_lab_1FB0:
+	cmpi.w #0, PLAYER_WALKSPEED
+	bne.w _lab_1FC8
+	move.w #1, PLAYER_WALKSPEED
+	bra.w _lab_1FE8
+_lab_1FC8:
+	move.w GLOBAL_TIMER, D1
+	andi.w #0xF, D1
+	bne.w _lab_1FE8
+	cmpi.w #2, PLAYER_WALKSPEED
+	bge.w _lab_1FE8
+	addq.w #1, PLAYER_WALKSPEED
+_lab_1FE8:
+	move.w #1, PLAYER_MOVING
+	move.w #1, PLAYER_ACCEL_RIGHT
+_lab_1FF8:
+	cmpi.w #0, 0xFF714E
+	beq.w _lab_201C
+	move.w #0, 0xFF714E
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+_lab_201C:
+	jsr (_lab_C468).l
+	cmpi.w #0xD, TILE_SIDE
+	beq.w _lab_212C
+	cmpi.w #0x8, TILE_SIDE
+	beq.w _lab_20FE
+	cmpi.w #0x11, TILE_SIDE
+	bge.w _lab_2056
+	cmpi.w #0, TILE_SIDE
+	bne.w _lab_20C2
+	bra.w _lab_2062
+_lab_2056:
+	move.w TILE_SIDE, D1
+	jsr (_lab_2682).l
+_lab_2062:
+	cmpi.w #0xF0, PLR_POS_X
+	blt.w _lab_20A6
+	cmpi.w #1, SCROLL_LOCK
+	beq.w _lab_20A6
+	move.w PLAYER_WALKSPEED, D1
+	add.w D1, SCROLL_OFFSET
+	move.w D1, ENTITY_DRIFT
+	clr.l D3
+	move.w D1, D3
+	divu.w #2, D3
+	add.w D3, BACKDROP_SCROLL
+	move.w #1, DO_SCROLLING
+	bra.w _lab_20CA
+_lab_20A6:
+	cmpi.w #0x168, PLR_POS_X
+	bge.w _lab_20C2
+	move.w PLAYER_WALKSPEED, D1
+	add.w D1, PLR_POS_X
+	bra.w _lab_20CA
+_lab_20C2:
+	move.w #0, PLAYER_WALKSPEED
+_lab_20CA:
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_21D6
+	cmpi.w #1, 0xFF7148
+	beq.w _lab_21D6
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF7148
+	bra.w _lab_21D6
+_lab_20FE:
+	cmpi.w #2, CURR_LEVEL ; 1-1 bonus
+	beq.w _lab_211A
+	cmpi.w #5, CURR_LEVEL ; 1-2 bonus
+	beq.w _lab_211A
+	bra.w _lab_2122
+_lab_211A:
+	move.w #2, TRANSITION_CONTROL
+_lab_2122:
+	jsr (load_next_level).l
+	bra.w _lab_21D6
+_lab_212C:
+	move.w #0x64, 0xFF6C02
+	jsr (play_sound).l
+	addi.w #0xC, PLR_POS_X
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #7, 0xFF7148
+	bra.w _lab_246C
+_lab_215E:
+	btst.b #CONT_BUTTON_DD, PLR_BUTTONS_HELD
+	beq.w _lab_21D6
+	jsr (_lab_C52A).l
+	cmpi.w #0x10, TILE_GROUND
+	beq.w _lab_2188
+	cmpi.w #0x5, TILE_GROUND
+	bne.w _lab_21A6
+_lab_2188:
+	move.w #0xC, 0xFF6C00 ; play pipe entrance intro
+	jsr (play_music).l
+	move.w TILE_GROUND, D2
+	jsr (_lab_301A).l
+	bra.w _lab_21D6
+_lab_21A6:
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_21D6
+	move.w #1, PLAYER_MOVING
+	move.w #3, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	bra.w _lab_21D6
+_lab_21D6:
+	cmpi.w #0, JUMP_HOLD
+	beq.w _lab_21F4
+	btst.b #CONT_BUTTON_C, PLR_BUTTONS_HELD
+	beq.w _lab_2266
+	addq.w #1, JUMP_HOLD
+_lab_21F4:
+	btst.b #CONT_BUTTON_C, PLR_BUTTONS_PRESSED
+	beq.w _lab_22AC
+	cmpi.w #1, PLAYER_SWIM
+	beq.w _lab_2218
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_22AC
+_lab_2218:
+	move.w #1, JUMP_HOLD
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_2252
+	move.w #0x58, 0xFF6C02
+	jsr (play_sound).l
+	move.w #2, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+_lab_2252:
+	move.w #0, 0xFF7150
+	move.w #0, 0xFF7152
+	bra.w _lab_22AC
+_lab_2266:
+	cmpi.w #4, JUMP_HOLD
+	bge.w _lab_227C
+	addq.w #1, JUMP_HOLD
+	bra.w _lab_22AC
+_lab_227C:
+	cmpi.w #0xD, JUMP_HOLD
+	blt.w _lab_2294
+	move.w #0, JUMP_HOLD
+	bra.w _lab_22AC
+_lab_2294:
+	move.b #1, 0xFF7152
+	move.w #0x11, 0xFF7150
+	move.w #0, JUMP_HOLD
+_lab_22AC:
+	btst.b #CONT_BUTTON_A, PLR_BUTTONS_PRESSED
+	beq.w _lab_2340
+	cmpi.b #1, PLR_FIERY
+	bne.w _lab_2340
+	move.w #0, D2
+_lab_22C8:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	addi.w #0x160, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	bne.w _lab_2310
+	move.w #0x62, 0xFF6C02
+	jsr (play_sound).l
+	move.w PLR_POS_X, (A6,D0.w)
+	move.w PLR_POS_Y, 0x2(A6,D0.w)
+	addq.w #4, 0x2(A6,D0.w)
+	move.w 0xFF714E, 0xE(A6,D0.w)
+	move.w #0x49, 0x4(A6,D0.w)
+	bra.w _lab_231C
+_lab_2310:
+	addq.w #1, D2
+	cmpi.w #2, D2
+	blt.b _lab_22C8
+	bra.w _lab_2370
+_lab_231C:
+	move.w #1, PLAYER_MOVING
+	move.w #6, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	bra.w _lab_2370
+_lab_2340:
+	btst.b #CONT_BUTTON_B, PLR_BUTTONS_HELD
+	beq.w _lab_2370
+	cmpi.w #0, PLAYER_ACCEL_LEFT
+	bne.w _lab_2368
+	cmpi.w #0, PLAYER_ACCEL_RIGHT
+	bne.w _lab_2368
+	bra.w _lab_2370
+_lab_2368:
+	move.w #3, PLAYER_WALKSPEED
+_lab_2370:
+	cmpi.w #9, 0xFF7148
+	beq.w _lab_23AC
+	cmpi.w #0x160, PLR_POS_Y
+	blt.w _lab_23AC
+	move.w #9, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0, 0xFF7150
+	bra.w _lab_246C
+_lab_23AC:
+	cmpi.w #2, 0xFF7148
+	bne.w _lab_23C2
+	jsr (_lab_BF8E).l
+	bra.w _lab_246C
+_lab_23C2:
+	cmpi.w #9, 0xFF7148
+	bne.w _lab_23D8
+	jsr (_lab_36EE).l
+	bra.w _lab_246C
+_lab_23D8:
+	cmpi.w #0xA, 0xFF7148
+	beq.w _lab_23EA
+	jsr (_lab_BEF4).l
+_lab_23EA:
+	cmpi.w #0, PLAYER_MOVING
+	bne.w _lab_246C
+	cmpi.w #2, 0xFF7148
+	beq.w _lab_246C
+	cmpi.w #0, 0xFF7148
+	beq.w _lab_246C
+	cmpi.w #10, 0xFF7148
+	beq.w _lab_246C
+	cmpi.w #6, 0xFF7148
+	beq.w _lab_246C
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0, 0xFF7148
+	bra.w _lab_246C
+_lab_2442:
+	jsr (_lab_2C1A).l
+	bra.w _lab_246C
+_lab_244C:
+	cmpi.w #0x25, CURR_LEVEL ; last room of 8-4
+	bne.w _lab_2462
+	jsr (show_princess_rescue_text).l
+	bra.w _lab_246C
+_lab_2462:
+	jsr (_lab_28E0).l
+	bra.w _lab_246C
+_lab_246C:
+	rts
+
+next_level:
+	.word 0x0001 ; 1-1 -> 1-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0003 ; 1-2 -> 1-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0000 ; 1-1 bonus -> 1-1
+	.word 0x000A
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B0
+	.word 0x0110
+	.word 0x000D
+	
+	.word 0x0004 ; 1-3 -> 1-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x0006 ; 1-4 -> 2-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0001 ; 1-2 bonus -> 1-2
+	.word 0x0006
+	.word 0x00F0
+	.word 0x0000
+	.word 0x00C0
+	.word 0x0108
+	.word 0x0029
+	
+	.word 0x0007 ; 2-1 -> 2-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0008 ; 2-2 -> 2-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0009 ; 2-3 -> 2-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x000A ; 2-4 -> 3-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000B ; 3-1 -> 3-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000C ; 3-2 -> 3-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000D ; 3-3 -> 3-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x000E ; 3-4 -> 4-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000F ; 4-1 -> 4-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0010 ; 4-2 -> 4-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0011 ; 4-3 -> 4-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x0012 ; 4-4 -> 5-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0013 ; 5-1 -> 5-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0014 ; 5-2 -> 5-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0015 ; 5-3 -> 5-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x0016 ; 5-4 -> 6-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0017 ; 6-1 -> 6-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0018 ; 6-2 -> 6-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0019 ; 6-3 -> 6-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x001A ; 6-4 -> 7-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x001B ; 7-1 -> 7-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x001C ; 7-2 -> 7-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x001D ; 7-3 -> 7-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x001E ; 7-4 -> 8-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x001F ; 8-1 -> 8-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0020 ; 8-2 -> 8-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0021 ; 8-3 -> 8-4 room 1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+	
+	.word 0x0022 ; 8-4 room 1 -> 8-4 room 2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0023 ; 8-4 room 2 -> 8-4 room 3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0024 ; 8-4 room 3 -> 8-4 room 4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0025 ; 8-4 room 4 -> 8-4 final room
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0026 ; 8-4 final room -> ???
+	             ; BUG: THIS LEVEL DOES NOT EXIST!
+				 ; Thus, on level 0x25, using the cheat to warp to the next level would cause unexpected results...
+				 ; fix: replace 0x0026 by 0x0025, which would prevent the current level value to go above 0x25.
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+_lab_2682:
+	cmpi.w #0x11, CURR_LEVEL ; 4-4
+	bne.w _lab_26F2
+	cmpi.w #0x11, D1
+	bne.w _lab_26A2
+	move.w #1, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_26A2:
+	cmpi.w #0x12, D1
+	bne.w _lab_26B6
+	move.w #2, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_26B6:
+	cmpi.w #0x13, D1
+	bne.w _lab_26CA
+	move.w #3, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_26CA:
+	cmpi.w #0x14, D1
+	bne.w _lab_26DE
+	move.w #4, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_26DE:
+	cmpi.w #0x15, D1
+	bne.w _lab_271A
+	move.w #0, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_26F2:
+	cmpi.w #0x11, D1
+	bne.w _lab_2706
+	move.w #1, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_2706:
+	cmpi.w #0x12, D1
+	bne.w _lab_271A
+	move.w #2, LOOP_COMMAND
+	bra.w _lab_271A
+_lab_271A:
+	rts
+
+load_next_level:
+	cmpi.w #2, TRANSITION_CONTROL ; are we just going to a different room?
+	beq.w 1f                      ; in which case, skip
+	move.w #1, TRANSITION_CONTROL ; otherwise show transition screen to that next level
+	
+1:	lea (next_level).l, A2 ; load in the stats for the next level
+	move.w CURR_LEVEL, D1
+	mulu.w #0xE, D1
+	move.w (A2,D1.w),    CURR_LEVEL
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	rts
+
+show_princess_rescue_text:
+	cmpi.b #0, 0xFF7156
+	bne.w 1f
+	lea (rescue_text).l, A4
+	move.w #10, D1
+	move.w #10, D2
+	move.l #0x644A0002, D4 ; 11x11, start address 0xA44A, text starts at (5,8) on second screen of layer A
+	jsr (copyto_vram).l
+	move.b #1, 0xFF7156
+	bra.w 2f
+	
+1:	cmpi.b #1, 0xFF7156
+	bne.w 2f
+	move.w GLOBAL_TIMER, D1
+	andi.w #0x1F, D1
+	bne.w 2f
+	addq.b #1, 0xFF7157
+	cmpi.b #30, 0xFF7157
+	blt.w 2f
+	move.w #1, TRANSITION_CONTROL ; exit level
+	move.w #1, PRINCESS_RESCUED   ; and show ending scene
+	bra.w 2f
+	
+2:	rts
+
+rescue_text:
+	.word 0x022F,0x0223,0x021C,0x0229,0x0226,0x0000,0x0234,0x022A,0x0230,0x0000,0x0000 ; "THANK YOU  "
+	.word 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 ; "           "
+	.word 0x0000,0x022E,0x022A,0x0229,0x0224,0x021E,0x0000,0x0000,0x0000,0x0000,0x0000 ; " SONIC     " ; yeah, sonic. (fix: change that to mario)
+	.word 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 ; "           "
+	.word 0x022F,0x0223,0x0220,0x0000,0x0226,0x0224,0x0229,0x0222,0x021F,0x022A,0x0228 ; "THE KINGDOM"
+	.word 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 ; "           "
+	.word 0x0000,0x0224,0x022E,0x0000,0x022E,0x021C,0x0231,0x0220,0x021F,0x0000,0x0000 ; " IS SAVED  "
+	.word 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 ; "           "
+	.word 0x0229,0x022A,0x0232,0x0000,0x022F,0x022D,0x0234,0x0000,0x0000,0x0000,0x0000 ; "NOW TRY    "
+	.word 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 ; "           "
+	.word 0x0000,0x021C,0x0222,0x021C,0x0224,0x0229,0x0000,0x0000,0x0000,0x0000,0x0000 ; " AGAIN     "
+
+_lab_28E0:
+	cmpi.b #0, 0xFF7156
+	bne.w _lab_290A
+	addq.w #2, PLR_POS_X
+	cmpi.w #0x118, PLR_POS_X
+	blt.w _lab_2B74
+	move.b #1, 0xFF7156
+	bra.w _lab_2B74
+_lab_290A:
+	cmpi.b #1, 0xFF7156
+	bne.w _lab_2954
+	cmpi.w #1, SCROLL_LOCK
+	bne.w _lab_292E
+	move.b #2, 0xFF7156
+	bra.w _lab_2B74
+_lab_292E:
+	addq.w #2, SCROLL_OFFSET
+	move.w #2, ENTITY_DRIFT
+	addq.w #1, BACKDROP_SCROLL
+	move.w #1, DO_SCROLLING
+	subq.w #2, PLR_POS_X
+	bra.w _lab_2B74
+_lab_2954:
+	cmpi.b #2, 0xFF7156
+	bne.w _lab_29B6
+	addq.w #2, PLR_POS_X
+	cmpi.w #0xE0, PLR_POS_X
+	blt.w _lab_2B74
+	move.b #3, 0xFF7156
+	move.w #0, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0x100, 0xFF72C0
+	move.w #0x138, 0xFF72C2
+	move.w #0x88, 0xFF72C4
+	move.w #1, 0xFF72C8
+	bra.w _lab_2B74
+_lab_29B6:
+	cmpi.b #3, 0xFF7156
+	bne.w _lab_2A16
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_2B74
+	cmpi.w #0x88, 0xFF72C4
+	bne.w _lab_29E8
+	move.w #0x89, 0xFF72C4
+	bra.w _lab_29F0
+_lab_29E8:
+	move.w #0x88, 0xFF72C4
+_lab_29F0:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x14, 0xFF7157
+	blt.w _lab_2B74
+	move.b #0, 0xFF7157
+	move.b #4, 0xFF7156
+	bra.w _lab_2B74
+_lab_2A16:
+	cmpi.b #4, 0xFF7156
+	bne.w _lab_2A48
+	lea (retainer_text_1).l, A4
+	move.w #15, D1
+	move.w #0, D2
+	move.l #0x67500002, D4 ; 16x1, start address 0xA750
+	jsr (copyto_vram).l
+	move.b #5, 0xFF7156
+	bra.w _lab_2B74
+_lab_2A48:
+	cmpi.b #5, 0xFF7156
+	bne.w _lab_2AC2
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_2B74
+	cmpi.w #0x88, 0xFF72C4
+	bne.w _lab_2A7A
+	move.w #0x89, 0xFF72C4
+	bra.w _lab_2A82
+_lab_2A7A:
+	move.w #0x88, 0xFF72C4
+_lab_2A82:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x14, 0xFF7157
+	blt.w _lab_2B74
+	lea (retainer_text_2).l, A4
+	move.w #0x15, D1
+	move.w #0x2, D2
+	move.l #0x684A0002, D4 ; 22x3, start address 0xA84A
+	jsr (copyto_vram).l
+	move.b #6, 0xFF7156
+	move.b #0, 0xFF7157
+	bra.w _lab_2B74
+_lab_2AC2:
+	cmpi.b #6, 0xFF7156
+	bne.w _lab_2B22
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_2B74
+	cmpi.w #0x88, 0xFF72C4
+	bne.w _lab_2AF4
+	move.w #0x89, 0xFF72C4
+	bra.w _lab_2AFC
+_lab_2AF4:
+	move.w #0x88, 0xFF72C4
+_lab_2AFC:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x14, 0xFF7157
+	blt.w _lab_2B74
+	move.b #7, 0xFF7156
+	move.b #0, 0xFF7157
+	bra.w _lab_2B74
+_lab_2B22:
+	cmpi.b #7, 0xFF7156
+	bne.w _lab_2B74
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_2B74
+	cmpi.w #0x88, 0xFF72C4
+	bne.w _lab_2B54
+	move.w #0x89, 0xFF72C4
+	bra.w _lab_2B5C
+_lab_2B54:
+	move.w #0x88, 0xFF72C4
+_lab_2B5C:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x14, 0xFF7157
+	blt.w _lab_2B74
+	jsr (load_next_level).l
+_lab_2B74:
+	rts
+
+retainer_text_1:
+	.word 0x022F ; T
+	.word 0x0223 ; H
+	.word 0x021C ; A
+	.word 0x0229 ; N
+	.word 0x0226 ; K
+	.word 0x0000
+	.word 0x0234 ; Y
+	.word 0x022A ; O
+	.word 0x0230 ; U
+	.word 0x0000
+	.word 0x0228 ; M
+	.word 0x021C ; A
+	.word 0x022D ; R
+	.word 0x0224 ; I
+	.word 0x022A ; O
+	.word 0x0000
+
+retainer_text_2:
+	.word 0x021D ; B
+	.word 0x0230 ; U
+	.word 0x022F ; T
+	.word 0x0000
+	.word 0x022A ; O
+	.word 0x0230 ; U
+	.word 0x022D ; R
+	.word 0x0000
+	.word 0x022B ; P
+	.word 0x022D ; R
+	.word 0x0224 ; I
+	.word 0x0229 ; N
+	.word 0x021E ; C
+	.word 0x0220 ; E
+	.word 0x022E ; S
+	.word 0x022E ; S
+	.word 0x0000
+	.word 0x0224 ; I
+	.word 0x022E ; S
+	.word 0x0000
+	.word 0x0224 ; I
+	.word 0x0229 ; N
+	
+	.word 0x0000 ; separation line
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	
+	.word 0x021C ; A
+	.word 0x0229 ; N
+	.word 0x022A ; O
+	.word 0x022F ; T
+	.word 0x0223 ; H
+	.word 0x0220 ; E
+	.word 0x022D ; R
+	.word 0x0000
+	.word 0x021E ; C
+	.word 0x021C ; A
+	.word 0x022E ; S
+	.word 0x022F ; T
+	.word 0x0227 ; L
+	.word 0x0220 ; E
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+
+_lab_2C1A:
+	cmpi.b #0, 0xFF7156
+	bne.w _lab_2C6C
+	addq.b #1, 0xFF7157
+	cmpi.b #0x28, 0xFF7157
+	blt.w _lab_2EFA
+	move.b #0, 0xFF7157
+	move.b #1, 0xFF7156
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714E
+	bra.w _lab_2EFA
+_lab_2C6C:
+	cmpi.b #1, 0xFF7156
+	bne.w _lab_2D3E
+	jsr (_lab_C52A).l
+	cmpi.w #0x1, TILE_GROUND
+	beq.w _lab_2CA8
+	cmpi.w #0x5, TILE_GROUND
+	beq.w _lab_2CA8
+	cmpi.w #0x10, TILE_GROUND
+	beq.w _lab_2CA8
+	addq.w #2, PLR_POS_Y
+_lab_2CA8:
+	cmpi.w #0xF0, PLR_POS_X
+	blt.w _lab_2CE0
+	cmpi.w #1, SCROLL_LOCK
+	beq.w _lab_2CE0
+	addq.w #2, SCROLL_OFFSET
+	move.w #2, ENTITY_DRIFT
+	addq.w #1, BACKDROP_SCROLL
+	move.w #1, DO_SCROLLING
+	bra.w _lab_2CF2
+_lab_2CE0:
+	cmpi.w #0x168, PLR_POS_X
+	bge.w _lab_2CF2
+	addq.w #2, PLR_POS_X
+_lab_2CF2:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x32, 0xFF7157
+	blt.w _lab_2EFA
+	move.b #2, 0xFF7156
+	move.b #0, 0xFF7157
+	move.w #0, 0xFF714A
+	move.w #4, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0x66, 0xFF6C02
+	jsr (play_sound).l
+	bra.w _lab_2EFA
+_lab_2D3E:
+	cmpi.b #2, 0xFF7156
+	bne.w _lab_2D90
+	subq.w #1, LEVEL_TIMER
+	cmpi.w #0, LEVEL_TIMER
+	bgt.w _lab_2EFA
+	move.w #0, LEVEL_TIMER
+	move.b #3, 0xFF7156
+	move.b #0, 0xFF7157
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF7148
+	move.w #1, 0xFF714C
+	bra.w _lab_2EFA
+_lab_2D90:
+	cmpi.b #3, 0xFF7156
+	bne.w _lab_2DC8
+	addq.w #1, PLR_POS_X
+	addq.b #1, 0xFF7157
+	cmpi.b #0x1E, 0xFF7157
+	blt.w _lab_2EFA
+	move.b #4, 0xFF7156
+	move.b #0, 0xFF7157
+	bra.w _lab_2EFA
+_lab_2DC8:
+	cmpi.b #4, 0xFF7156
+	bne.w _lab_2E2A
+	addq.b #1, 0xFF7157
+	cmpi.b #0x70, 0xFF7157
+	blt.w _lab_2EFA
+	move.b #5, 0xFF7156
+	move.b #0, 0xFF7157
+	lea (_lab_2EFC).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), 0xFF7320
+	move.w 0x2(A2,D1.w), 0xFF7322
+	move.w #0x7C, 0xFF7324
+	move.w #1, 0xFF7328
+	bra.w _lab_2EFA
+_lab_2E2A:
+	cmpi.b #5, 0xFF7156
+	bne.w _lab_2E90
+	move.w GLOBAL_TIMER, D1
+	andi.w #0xF, D1
+	bne.w _lab_2E64
+	cmpi.w #0x7C, 0xFF7324
+	beq.w _lab_2E5C
+	move.w #0x7C, 0xFF7324
+	bra.w _lab_2E64
+_lab_2E5C:
+	move.w #0x7D, 0xFF7324
+_lab_2E64:
+	subq.w #1, 0xFF7322
+	addq.b #1, 0xFF7157
+	cmpi.b #0x10, 0xFF7157
+	blt.w _lab_2EFA
+	move.b #6, 0xFF7156
+	move.b #0, 0xFF7157
+	bra.w _lab_2EFA
+_lab_2E90:
+	cmpi.b #6, 0xFF7156
+	bne.w _lab_2EE6
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_2EFA
+	cmpi.w #0x7C, 0xFF7324
+	beq.w _lab_2EC2
+	move.w #0x7C, 0xFF7324
+	bra.w _lab_2ECA
+_lab_2EC2:
+	move.w #0x7D, 0xFF7324
+_lab_2ECA:
+	addq.b #1, 0xFF7157
+	cmpi.b #0x1E, 0xFF7157
+	blt.w _lab_2EFA
+	jsr (load_next_level).l
+	bra.w _lab_2EFA
+_lab_2EE6:
+	cmpi.b #7, 0xFF7156
+	bne.w _lab_2EF6 ;
+	bra.w _lab_2EFA ; this hurts my mind 
+_lab_2EF6:
+	bra.w _lab_2EFA
+_lab_2EFA:
+	rts
+
+_lab_2EFC:
+	.word 0x0140 ; 1-1
+	.word 0x0100
+	
+	.word 0x0140 ; 1-2
+	.word 0x0100
+	
+	.word 0x0000 ; 1-1 bonus
+	.word 0x0000
+	
+	.word 0x0000 ; 1-3
+	.word 0x0000
+	
+	.word 0x0000 ; 1-4
+	.word 0x0000
+	
+	.word 0x0000 ; 1-2 bonus
+	.word 0x0000
+	
+	.word 0x0108 ; 2-1
+	.word 0x0100
+	
+	.word 0x0000 ; 2-2
+	.word 0x0000
+	
+	.word 0x0000 ; 2-3
+	.word 0x0000
+	
+	.word 0x0000 ; 2-4
+	.word 0x0000
+	
+	.word 0x0000 ; 3-1
+	.word 0x0000
+	
+	.word 0x0100 ; 3-2
+	.word 0x0100
+	
+	.word 0x0000 ; 3-3
+	.word 0x0000
+	
+	.word 0x0000 ; 3-4
+	.word 0x0000
+	
+	.word 0x0100 ; 4-1
+	.word 0x0100
+	
+	.word 0x0000 ; 4-2
+	.word 0x0000
+	
+	.word 0x0000 ; 4-3
+	.word 0x0000
+	
+	.word 0x0000 ; 4-4
+	.word 0x0000
+	
+	.word 0x0128 ; 5-1
+	.word 0x0100
+	
+	.word 0x0100 ; 5-2
+	.word 0x0100
+	
+	.word 0x0000 ; 5-3
+	.word 0x0000
+	
+	.word 0x0000 ; 5-4
+	.word 0x0000
+	
+	.word 0x0100 ; 6-1
+	.word 0x0100
+	
+	.word 0x0100 ; 6-2
+	.word 0x0100
+	
+	.word 0x0000 ; 6-3
+	.word 0x0000
+	
+	.word 0x0000 ; 6-4
+	.word 0x0000
+	
+	.word 0x0100 ; 7-1
+	.word 0x0100
+	
+	.word 0x0000 ; 7-2
+	.word 0x0000
+	
+	.word 0x0000 ; 7-3
+	.word 0x0000
+	
+	.word 0x0000 ; 7-4
+	.word 0x0000
+	
+	.word 0x0124 ; 8-1
+	.word 0x0100
+	
+	.word 0x0100 ; 8-2
+	.word 0x0100
+	
+	.word 0x0000 ; 8-3
+	.word 0x0000
+	
+	.word 0x0000 ; 8-4
+	.word 0x0000
+
+_lab_2F84:
+	cmpi.b #1, PLR_STAR
+	bne.w _lab_3018
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_3018
+	cmpi.w #1, STAR_BLINK
+	beq.w _lab_2FBA
+	move.w #0xEEE, D3
+	move.w #1, STAR_BLINK
+	bra.w _lab_2FC6
+_lab_2FBA:
+	move.w #0, D3
+	move.w #0, STAR_BLINK
+_lab_2FC6:
+	move.l #0xC0040000, (A1)
+	move.w D3, (A0)
+	addq.w #1, STAR_TIMER
+	cmpi.w #0x7F, STAR_TIMER
+	blt.w _lab_3018
+	move.b #0, PLR_STAR
+	move.w #0, STAR_TIMER
+	move.l #0xC0040000, (A1)
+	move.w #0, (A0)
+	lea (level_themes), A2
+	move.w CURR_LEVEL, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), 0xFF6C00
+	jsr (play_music).l
+_lab_3018:
+	rts
+
+_lab_301A:
+	cmpi.w #0x10, D2
+	bne.w _lab_3036
+	lea (_lab_3136).l, A2
+	move.w CURR_LEVEL, D1
+	subi.w #0x21, D1
+	bra.w _lab_30AA
+_lab_3036:
+	cmpi.w #1, CURR_LEVEL
+	bne.w _lab_3078
+	cmpi.w #1, SCROLL_LOCK
+	bne.w _lab_309E
+	lea (_lab_30FE).l, A2
+	move.w #0, D1
+	cmpi.w #0xD0, PLR_POS_X
+	ble.w _lab_30AA
+	addq.w #1, D1
+	cmpi.w #0x108, PLR_POS_X
+	ble.w _lab_30AA
+	addq.w #1, D1
+	bra.w _lab_30AA
+_lab_3078:
+	cmpi.w #0xF, CURR_LEVEL ; 4-2
+	bne.w _lab_309E
+	cmpi.w #1, SCROLL_LOCK
+	bne.w _lab_309E
+	lea (_lab_30FE).l, A2
+	move.w #3, D1
+	bra.w _lab_30AA
+_lab_309E:
+	lea (_lab_317C).l, A2
+	move.w CURR_LEVEL, D1
+_lab_30AA:
+	mulu.w #0xE, D1
+	move.w (A2,D1.w),    CURR_LEVEL
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	move.w #2, TRANSITION_CONTROL
+	move.w #0x61, 0xFF6C02
+	jsr (play_sound).l
+	rts
+
+_lab_30FE:
+	.word 0x0006 ; 2-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000A ; 3-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x000E ; 4-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+	
+	.word 0x0012 ; 5-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+
+_lab_3136:
+	.word 0x0022 ; 8-4 room 2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0023 ; 8-4 room 3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0024 ; 8-4 room 4 (underwater)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0021 ; 8-4 room 1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0021 ; 8-4 room 1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+
+_lab_317C:
+	.word 0x0002 ; 1-1 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0080
+	.word 0x0000
+	
+	.word 0x0005 ; 1-2 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0080
+	.word 0x0000
+	
+	.word 0x0002 ; 1-1 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0080
+	.word 0x0000
+	
+	.word 0x0002 ; 1-1 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0080
+	.word 0x0000
+	
+	.word 0x0002 ; 1-1 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0080
+	.word 0x0000
+	
+	.word 0x0005 ; 1-2 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+	
+	.word 0x0006 ; 2-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+	
+	.word 0x0007 ; 2-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+	
+	.word 0x0008 ; 2-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+	
+	.word 0x0009 ; 2-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+	
+	.word 0x000A ; 3-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x000B ; 3-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x000C ; 3-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x000D ; 3-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x000E ; 4-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x000F ; 4-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0010 ; 4-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0011 ; 4-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0012 ; 5-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0013 ; 5-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0014 ; 5-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0015 ; 5-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0016 ; 6-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0017 ; 6-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0018 ; 6-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0019 ; 6-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001A ; 7-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001B ; 7-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001C ; 7-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001D ; 7-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001E ; 8-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x001F ; 8-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0020 ; 8-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0021 ; 8-4 room 1
+	.word 0x0000
+	.word 0x00C8
+	.word 0x0000
+	.word 0x00F0
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0022 ; 8-4 room 2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0023 ; 8-4 room 3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+	
+	.word 0x0021 ; 8-4 room 1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0060
+	.word 0x0000
+	
+	.word 0x0024 ; 8-4 room 4 (underwater)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+_lab_3390:
+	clr.l D1
+	clr.l D2
+	clr.l D3
+	clr.l D4
+	move.l #0x50C40003, D4
+	lea (_lab_36A0).l, A3
+	lea (BUF_PLAYER_DIGITS).l, A2
+	move.w #0, D2
+_lab_33AE:
+	move.w D2, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addq.w #1, D2
+	addi.l #0x20000, D4
+	cmpi.w #6, D2
+	blt.b _lab_33AE
+	move.l #0x50840003, D4
+	lea (_lab_36B8).l, A3
+	lea (_lab_367A).l, A2
+	cmpi.w #0, CURR_PLAYER
+	beq.w _lab_33F6
+	lea (_lab_3684).l, A2
+_lab_33F6:
+	move.w #0, D2
+_lab_33FA:
+	move.w D2, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addq.w #1, D2
+	addi.l #0x20000, D4
+	cmpi.w #5, D2
+	blt.b _lab_33FA
+	move.l #0x50A40003, D4
+	lea (_lab_36B8).l, A3
+	lea (_lab_368E).l, A2
+	move.w #0, D2
+_lab_3434:
+	move.w D2, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addq.w #1, D2
+	addi.l #0x20000, D4
+	cmpi.w #5, D2
+	blt.b _lab_3434
+	move.l #0x50E60003, D4
+	lea (_lab_36A0).l, A3
+	lea (_lab_3596).l, A2
+	move.w #0, D2
+	move.w CURR_LEVEL, D1
+	mulu.w #6, D1
+_lab_3478:
+	move.w (A2,D1.w), D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addq.w #1, D2
+	addq.w #2, D1
+	addi.l #0x20000, D4
+	cmpi.w #3, D2
+	blt.b _lab_3478
+	move.l #0x50B20003, D4
+	lea (_lab_36B8).l, A3
+	lea (_lab_3698).l, A2
+	move.w #0, D2
+_lab_34AE:
+	move.w D2, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addq.w #1, D2
+	addi.l #0x20000, D4
+	cmpi.w #4, D2
+	blt.b _lab_34AE
+	move.l #0x50F40003, D4
+	lea (_lab_36A0).l, A3
+	clr.l D1
+	move.w LEVEL_TIMER, D1
+	divu.w #100, D1
+	move.w D1, D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addi.l #0x20000, D4
+	swap D1
+	andi.l #0xFFFF, D1
+	divu.w #10, D1
+	move.w D1, D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addi.l #0x20000, D4
+	swap D1
+	move.w D1, D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	lea (_lab_3586).l, A4
+	move.w #3, D1
+	move.w #1, D2
+	move.l #0x50920003, D4
+	jsr (_lab_D92E).l
+	move.l #0x50DA0003, D4
+	lea (_lab_36A0).l, A3
+	clr.l D1
+	move.w PLAYER_COINS, D1
+	divu.w #10, D1
+	move.w D1, D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	addi.l #0x20000, D4
+	swap D1
+	move.w D1, D3
+	mulu.w #2, D3
+	move.w (A3,D3.w), D3
+	move.l D4, (A1)
+	move.w D3, (A0)
+	rts
+
+_lab_3586:
+	.word 0x0130,0x0132,0x0134,0x0000
+	.word 0x0131,0x0133,0x0135,0x0217
+
+_lab_3596:
+	.word 1,0xB,1
+	.word 1,0xB,2
+	.word 1,0xB,1
+	.word 1,0xB,3
+	.word 1,0xB,4
+	.word 1,0xB,2
+	
+	.word 2,0xB,1
+	.word 2,0xB,2
+	.word 2,0xB,3
+	.word 2,0xB,4
+	
+	.word 3,0xB,1
+	.word 3,0xB,2
+	.word 3,0xB,3
+	.word 3,0xB,4
+	
+	.word 4,0xB,1
+	.word 4,0xB,2
+	.word 4,0xB,3
+	.word 4,0xB,4
+	
+	.word 5,0xB,1
+	.word 5,0xB,2
+	.word 5,0xB,3
+	.word 5,0xB,4
+	
+	.word 6,0xB,1
+	.word 6,0xB,2
+	.word 6,0xB,3
+	.word 6,0xB,4
+	
+	.word 7,0xB,1
+	.word 7,0xB,2
+	.word 7,0xB,3
+	.word 7,0xB,4
+	
+	.word 8,0xB,1
+	.word 8,0xB,2
+	.word 8,0xB,3
+	.word 8,0xB,4
+	.word 8,0xB,4
+	.word 8,0xB,4
+	.word 8,0xB,4
+	.word 8,0xB,4
+
+_lab_367A:
+	.word 0xC,0x0,0x11,0x8,0xE ; "MARIO"
+
+_lab_3684:
+	.word 0xB,0x14,0x8,0x6,0x8 ; "LUIGI"
+
+_lab_368E:
+	.word 0x16,0xE,0x11,0xB,0x3 ; "WORLD"
+
+_lab_3698:
+	.word 0x13,0x8,0xC,0x4 ; "TIME"
+
+_lab_36A0:
+	.word 0x0216 ; 0
+	.word 0x020D ; 1
+	.word 0x020E ; 2
+	.word 0x020F ; 3
+	.word 0x0210 ; 4
+	.word 0x0211 ; 5
+	.word 0x0212 ; 6
+	.word 0x0213 ; 7
+	.word 0x0214 ; 8
+	.word 0x0215 ; 9
+	.word 0x0217 ; "x"
+	.word 0x0236 ; "-"
+
+_lab_36B8:
+	.word 0x021C ; A
+	.word 0x021D ; B
+	.word 0x021E ; C
+	.word 0x021F ; D
+	.word 0x0220 ; E
+	.word 0x0221 ; F
+	.word 0x0222 ; G
+	.word 0x0223 ; H
+	.word 0x0224 ; I
+	.word 0x0225 ; J
+	.word 0x0226 ; K
+	.word 0x0227 ; L
+	.word 0x0228 ; M
+	.word 0x0229 ; N
+	.word 0x022A ; O
+	.word 0x022B ; P
+	.word 0x022C ; Q
+	.word 0x022D ; R
+	.word 0x022E ; S
+	.word 0x022F ; T
+	.word 0x0230 ; U
+	.word 0x0231 ; V
+	.word 0x0232 ; W
+	.word 0x0233 ; X
+	.word 0x0234 ; Y
+	.word 0x0235 ; Z
+	.word 0x0236 ; "-"
+
+_lab_36EE:
+	cmpi.w #0xE, 0xFF6C00
+	beq.w _lab_3708
+	move.w #0xE, 0xFF6C00
+	jsr (play_music).l
+_lab_3708:
+	lea (_lab_3846).l, A2
+	move.w 0xFF7150, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	cmpi.w #0x8888, D2
+	bne.w _lab_37AA
+	move.w #1, TRANSITION_CONTROL
+	lea (level_stats_start).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #0xE, D1
+	move.w (A2,D1.w), CURR_LEVEL
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	move.w #0, PLAYER_START_FIERY
+	move.w #0, PLAYER_SIZE
+	subq.w #1, PLAYER_LIVES
+	cmpi.w #0, PLAYER_LIVES
+	bgt.w _lab_3844
+	move.w #0, PLAYER_LIVES
+	move.w #1, PLAYER_GAME_OVER
+	bra.w _lab_3844
+_lab_37AA:
+	add.w D2, PLR_POS_Y
+	addq.w #1, 0xFF7150
+	cmpi.w #0x160, PLR_POS_Y
+	ble.w _lab_3844
+	move.w #1, TRANSITION_CONTROL
+	lea (level_stats_start).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #0xE, D1
+	move.w (A2,D1.w), CURR_LEVEL
+	move.w 0x2(A2,D1.w), SCREENS_CROSSED
+	move.w 0x4(A2,D1.w), SCROLL_OFFSET
+	move.w 0x6(A2,D1.w), BACKDROP_SCROLL
+	move.w 0x8(A2,D1.w), PLAYER_START_X
+	move.w 0xA(A2,D1.w), PLAYER_START_Y
+	move.w 0xC(A2,D1.w), ENTITY_INDEX
+	move.w #0, PLAYER_START_FIERY
+	move.w #0, PLAYER_SIZE
+	subq.w #1, PLAYER_LIVES
+	cmpi.w #0, PLAYER_LIVES
+	bgt.w _lab_3844
+	move.w #0, PLAYER_LIVES
+	move.w #1, PLAYER_GAME_OVER
+_lab_3844:
+	rts
+
+_lab_3846:
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0xFFF9
+	.word 0xFFF9
+	.word 0xFFFA
+	.word 0xFFFA
+	.word 0xFFFA
+	.word 0xFFFA
+	.word 0xFFFB
+	.word 0xFFFB
+	.word 0xFFFB
+	.word 0xFFFC
+	.word 0xFFFC
+	.word 0xFFFD
+	.word 0xFFFD
+	.word 0xFFFD
+	.word 0xFFFD
+	.word 0xFFFE
+	.word 0xFFFE
+	.word 0xFFFE
+	.word 0xFFFE
+	.word 0xFFFF
+	.word 0xFFFF
+	.word 0xFFFF
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x0007
+	.word 0x0007
+	.word 0x0007
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x0008
+	.word 0x8888
+
+level_stats_start:
+	.word 0x0000 ; 1-1
+	.word 0x0000 ; starting screen
+	.word 0x0000 ; scrolling offset
+	.word 0x0000 ; backdrop scrolling offset
+	.word 0x00A0 ; player horizontal starting position
+	.word 0x0130 ; player vertical starting position
+	.word 0x0000 ; first entity index
+
+	.word 0x0001 ; 1-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0002 ; 1-1 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0003 ; 1-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0004 ; 1-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0090
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x0005 ; 1-2 bonus
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0118
+	.word 0x0000
+
+	.word 0x0006 ; 2-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0007 ; 2-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0008 ; 2-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0009 ; 2-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0090
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x000A ; 3-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x000B ; 3-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x000C ; 3-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x000D ; 3-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x0090
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x000E ; 4-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x000F ; 4-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0010 ; 4-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0011 ; 4-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x0012 ; 5-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0013 ; 5-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0014 ; 5-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0015 ; 5-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x0016 ; 6-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0017 ; 6-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0018 ; 6-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0019 ; 6-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x001A ; 7-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x001B ; 7-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x001C ; 7-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x001D ; 7-4
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x001E ; 8-1
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x001F ; 8-2
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0020 ; 8-3
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x0130
+	.word 0x0000
+
+	.word 0x0021 ; 8-4 (1)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00A0
+	.word 0x00D0
+	.word 0x0000
+
+	.word 0x0022 ; 8-4 (2)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+	.word 0x0023 ; 8-4 (3)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+	.word 0x0024 ; 8-4 (4)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+	.word 0x0025 ; 8-4 (5)
+	.word 0x0000
+	.word 0x0000
+	.word 0x0000
+	.word 0x00B8
+	.word 0x0110
+	.word 0x0000
+
+_lab_3AEA:
+	move.w #0, D5
+_lab_3AEE:
+	move.w D5, D0
+	mulu.w #0x20, D0
+	addi.w #0x160, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	beq.w _lab_3C44
+	cmpi.b #0, 0xC(A6,D0.w)
+	bne.w _lab_3B88
+	cmpi.w #1, 0xE(A6,D0.w)
+	beq.w _lab_3B1E
+	addq.w #4, (A6,D0.w)
+	bra.w _lab_3B22
+_lab_3B1E:
+	subq.w #4, (A6,D0.w)
+_lab_3B22:
+	addq.w #3, 0x2(A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #1, ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #1, 0x16(A6,D0.w)
+	bne.w _lab_3B56
+	move.b #1, 0xC(A6,D0.w)
+	move.w #0, 0xA(A6,D0.w)
+	bra.w _lab_3C36
+_lab_3B56:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #1, ENTITY_WIDTH
+	move.b 0xE(A6,D0.w), 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_3C36
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_3C36
+_lab_3B88:
+	cmpi.b #1, 0xC(A6,D0.w)
+	bne.w _lab_3C36
+	lea (_lab_3C50).l, A2
+	move.w 0xA(A6,D0.w), D1
+	mulu.w #4, D1
+	cmpi.w #0x8888, (A2,D1.w)
+	bne.w _lab_3BDE
+	move.w #0, D1
+	move.w #0, 0xA(A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #1, ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #1, 0x16(A6,D0.w)
+	beq.w _lab_3BDE
+	move.b #0, 0xC(A6,D0.w)
+	bra.w _lab_3C36
+_lab_3BDE:
+	move.w (A2,D1.w), D2
+	cmpi.w #1, 0xE(A6,D0.w)
+	beq.w _lab_3BF4
+	add.w D2, (A6,D0.w)
+	bra.w _lab_3BF8
+_lab_3BF4:
+	sub.w D2, (A6,D0.w)
+_lab_3BF8:
+	move.w 0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.w #1, 0xA(A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #1, ENTITY_WIDTH
+	move.b 0xE(A6,D0.w), 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_3C36
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_3C36
+_lab_3C36:
+	jsr (_lab_3C92).l
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+_lab_3C44:
+	addq.w #1, D5
+	cmpi.w #2, D5
+	blt.w _lab_3AEE
+	rts
+
+_lab_3C50:
+	.word 0x0001,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0003,0xFFFD
+	.word 0x0003,0xFFFD
+	.word 0x0002,0xFFFD
+	.word 0x0002,0xFFFC
+	.word 0x0003,0xFFFC
+	.word 0x0003,0x0004
+	.word 0x0002,0x0004
+	.word 0x0002,0x0003
+	.word 0x0003,0x0003
+	.word 0x0003,0x0003
+	.word 0x0002,0x0002
+	.word 0x0002,0x0002
+	.word 0x0001,0x0002
+	.word 0x8888
+
+_lab_3C92:
+	movem.l D0-D5, -(A7)
+	move.w #0, PLAYER_INTERSECT_ENEMY
+	move.w #0x16, D2
+_lab_3CA2:
+	move.w D2, D4
+	mulu.w #0x20, D4
+	cmp.w D4, D0
+	beq.w _lab_3D8C
+	cmpi.w #0, 0x4(A6,D4.w)
+	beq.w _lab_3D8C
+	cmpi.w #4, 0x8(A6,D4.w)
+	beq.w _lab_3CC6
+	bra.w _lab_3D8C
+_lab_3CC6:
+	move.w (A6,D0.w), PLAYER_COLLIDE_LEFT
+	move.w 0x2(A6,D0.w), PLAYER_COLLIDE_TOP
+	lea (_lab_401E).l, A2
+	move.w 0x4(A6,D0.w), D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), PLAYER_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), PLAYER_COLLIDE_BOTTOM
+	move.w (A6,D4.w), ENTITY_COLLIDE_LEFT
+	move.w 0x2(A6,D4.w), ENTITY_COLLIDE_TOP
+	move.w 0x4(A6,D4.w), D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), ENTITY_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), ENTITY_COLLIDE_BOTTOM
+	jsr (_lab_4592).l
+	cmpi.w #0, PLAYER_INTERSECT_ENEMY
+	beq.w _lab_3D8C
+	cmpi.b #2, 0x15(A6,D4.w)
+	bne.w _lab_3D4A
+	move.b #1, 0x1A(A6,D4.w)
+	move.w #0, PLAYER_INTERSECT_ENEMY
+	bra.w _lab_3D96
+_lab_3D4A:
+	move.w #0x59, 0xFF6C02
+	jsr (play_sound).l
+	move.b #2, 0x15(A6,D4.w)
+	move.b #0, 0x1A(A6,D4.w)
+	move.b #1, 0x1C(A6,D4.w)
+	move.w #0, 0xE(A6,D4.w)
+	move.b #0, 0x17(A6,D4.w)
+	cmpi.w #4, 0x8(A6,D0.w)
+	beq.w _lab_3D96
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_3D96
+_lab_3D8C:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_3CA2
+_lab_3D96:
+	movem.l (A7)+, D0-D5
+	rts
+
+_lab_3D9C:
+	cmpi.w #0x64, (A6,D1.w)
+	blt.w _lab_3DC8
+	cmpi.w #0x180, (A6,D1.w)
+	bgt.w _lab_3DC8
+	cmpi.w #0x64, 0x2(A6,D1.w)
+	blt.w _lab_3DC8
+	cmpi.w #0x168, 0x2(A6,D1.w)
+	bgt.w _lab_3DC8
+	bra.w _lab_3DCE
+_lab_3DC8:
+	jsr (_lab_CF24).l
+_lab_3DCE:
+	rts
+
+_lab_3DD0:
+	cmpi.w #0xA, 0xFF7148
+	beq.w _lab_401C
+	cmpi.w #9, 0xFF7148
+	beq.w _lab_401C
+	cmpi.b #1, 0xFF7159
+	beq.w _lab_401C
+	move.w #0x16, D2
+_lab_3DF8:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	beq.w _lab_4012
+	cmpi.w #3, 0x8(A6,D0.w)
+	beq.w _lab_3E52
+	cmpi.w #4, 0x8(A6,D0.w)
+	beq.w _lab_3E34
+	cmpi.w #2, 0x8(A6,D0.w)
+	beq.w _lab_3E52
+	cmpi.w #5, 0x8(A6,D0.w)
+	beq.w _lab_3E52
+	bra.w _lab_4012
+_lab_3E34:
+	cmpi.w #2, 0x10(A6,D0.w)
+	beq.w _lab_3E52
+	cmpi.w #3, 0x10(A6,D0.w)
+	beq.w _lab_3E52
+	cmpi.b #2, 0x15(A6,D0.w)
+	beq.w _lab_4012
+_lab_3E52:
+	move.w PLR_POS_X, PLAYER_COLLIDE_LEFT
+	move.w PLR_POS_Y, PLAYER_COLLIDE_TOP
+	lea (_lab_401E).l, A2
+	move.w PLR_SPRITE, D1
+	cmpi.w #0, D1
+	bne.w _lab_3E80
+	move.w PLAYER_FLASHING_SPRITE, D1
+_lab_3E80:
+	mulu.w #4, D1
+	move.w (A2,D1.w), PLAYER_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), PLAYER_COLLIDE_BOTTOM
+	move.w (A6,D0.w), ENTITY_COLLIDE_LEFT
+	move.w 0x2(A6,D0.w), ENTITY_COLLIDE_TOP
+	move.w 0x4(A6,D0.w), D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), ENTITY_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), ENTITY_COLLIDE_BOTTOM
+	jsr (_lab_4592).l
+	cmpi.w #0, PLAYER_INTERSECT_ENEMY
+	beq.w _lab_4012
+	cmpi.w #4, 0x8(A6,D0.w)
+	beq.w _lab_3EE6
+	cmpi.w #5, 0x8(A6,D0.w)
+	beq.w _lab_3EE6
+	bra.w _lab_3FA2
+_lab_3EE6:
+	cmpi.b #1, PLR_STAR
+	bne.w _lab_3F14
+	move.b #1, 0x1C(A6,D0.w)
+	move.b #2, 0x15(A6,D0.w)
+	move.b #0, 0x1A(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_401C
+_lab_3F14:
+	cmpi.b #1, PLR_FLASH
+	beq.w _lab_401C
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_3F34
+	move.b #1, 0x1A(A6,D0.w)
+	bra.w _lab_401C
+_lab_3F34:
+	cmpi.b #1, 0x1A(A6,D0.w)
+	beq.w _lab_401C
+	cmpi.w #1, PLAYER_SIZE
+	bne.w _lab_3F86
+	move.w #10, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF7154
+	move.b #0, 0xFF7156
+	move.b #0, PLR_FIERY
+	move.w #0, PLAYER_START_FIERY
+	bra.w _lab_401C
+_lab_3F86:
+	move.w #9, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	bra.w _lab_401C
+_lab_3FA2:
+	cmpi.w #2, 0x8(A6,D0.w)
+	bne.w _lab_3FFA
+	move.w #0x5A, 0xFF6C02
+	jsr (play_sound).l
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	addq.w #1, PLAYER_COINS
+	cmpi.w #0x64, PLAYER_COINS
+	blt.w _lab_401C
+	move.w #0, PLAYER_COINS
+	addq.w #1, PLAYER_LIVES
+	cmpi.w #9, PLAYER_LIVES
+	ble.w _lab_401C
+	move.w #9, PLAYER_LIVES
+	bra.w _lab_401C
+_lab_3FFA:
+	jsr (_lab_445A).l
+	move.w #1, D3
+	jsr (_lab_C428).l
+	move.w D0, D1
+	jsr (_lab_CF24).l
+_lab_4012:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_3DF8
+_lab_401C:
+	rts
+
+_lab_401E:
+	.word 0x0000,0x0000
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0018,0x0020
+	.word 0x0018,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0018
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0018
+	.word 0x0018,0x0020
+	.word 0x0018,0x0020
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0020
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0018,0x0010
+	.word 0x0018,0x0010
+	.word 0x0018,0x0010
+	.word 0x0018,0x0010
+	.word 0x0018,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0008,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0008,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0008,0x0008
+	.word 0x0020,0x0008
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0020,0x0028
+	.word 0x0020,0x0028
+	.word 0x0020,0x0028
+	.word 0x0020,0x0028
+	.word 0x0020,0x0028
+	.word 0x0018,0x000C
+	.word 0x0018,0x000C
+	.word 0x0018,0x000C
+	.word 0x0010,0x0010
+	.word 0x0010,0x0020
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0018,0x0010
+	.word 0x0018,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0008,0x0008
+	.word 0x0010,0x0018
+	.word 0x0010,0x0018
+	.word 0x0010,0x0010
+	.word 0x0010,0x0010
+	.word 0x0020,0x0010
+	.word 0x0020,0x0010
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0010,0x0038
+	.word 0x0010,0x0038
+	.word 0x0010,0x0038
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0000,0x0000
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0018
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0018
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+	.word 0x0010,0x0020
+
+_lab_445A:
+	movem.l D0-D4, -(A7)
+	cmpi.w #0xA, 0x12(A6,D0.w)
+	bne.w _lab_4486
+	addq.w #1, PLAYER_LIVES
+	cmpi.w #9, PLAYER_LIVES
+	ble.w _lab_458C
+	move.w #9, PLAYER_LIVES
+	bra.w _lab_458C
+_lab_4486:
+	cmpi.w #0xB, 0x12(A6,D0.w)
+	bne.w _lab_4516
+	move.w #0x5E, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0xA, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF7154
+	move.b #0, 0xFF7156
+	move.b #0, PLR_FIERY
+	move.w #0, PLAYER_START_FIERY
+	move.w 0xFF714E, D1
+	mulu.w #0xC, D1
+	addi.w #0x24, D1
+	move.w D1, PLR_SPRITE
+	lea (gfx_mario).l, A2
+	cmpi.w #0, CURR_PLAYER
+	beq.w _lab_4502
+	lea (gfx_luigi).l, A2
+_lab_4502:
+	move.l #0x40000000, D4
+	move.w #0x330, D0
+	jsr (copyto_vdp_mem).l
+	bra.w _lab_458C
+_lab_4516:
+	cmpi.w #0xC, 0x12(A6,D0.w)
+	bne.w _lab_453A
+	move.b #1, PLR_STAR
+	move.w #0xD, 0xFF6C00
+	jsr (play_music).l
+	bra.w _lab_458C
+_lab_453A:
+	cmpi.w #0xD, 0x12(A6,D0.w)
+	bne.w _lab_458C
+	cmpi.w #0, PLAYER_SIZE
+	beq.w _lab_458C
+	move.b #1, PLR_FIERY
+	move.w #1, PLAYER_START_FIERY
+	lea (gfx_mario_fire).l, A2
+	cmpi.w #0, CURR_PLAYER
+	beq.w _lab_4578
+	lea (gfx_mario_fire).l, A2
+_lab_4578:
+	move.l #0x40000000, D4
+	move.w #0x330, D0
+	jsr (copyto_vdp_mem).l
+	bra.w _lab_458C
+_lab_458C:
+	movem.l (A7)+, D0-D4
+	rts
+
+_lab_4592:
+	movem.l D0, -(A7)
+	move.w PLAYER_COLLIDE_LEFT, D0
+	add.w D0, PLAYER_COLLIDE_RIGHT
+	move.w PLAYER_COLLIDE_TOP, D0
+	add.w D0, PLAYER_COLLIDE_BOTTOM
+	move.w ENTITY_COLLIDE_LEFT, D0
+	add.w D0, ENTITY_COLLIDE_RIGHT
+	move.w ENTITY_COLLIDE_TOP, D0
+	add.w D0, ENTITY_COLLIDE_BOTTOM
+	move.w PLAYER_COLLIDE_RIGHT, D0
+	cmp.w ENTITY_COLLIDE_LEFT, D0
+	blt.w _lab_4612
+	move.w ENTITY_COLLIDE_RIGHT, D0
+	cmp.w PLAYER_COLLIDE_LEFT, D0
+	blt.w _lab_4612
+	move.w PLAYER_COLLIDE_BOTTOM, D0
+	cmp.w ENTITY_COLLIDE_TOP, D0
+	blt.w _lab_4612
+	move.w ENTITY_COLLIDE_BOTTOM, D0
+	cmp.w PLAYER_COLLIDE_TOP, D0
+	blt.w _lab_4612
+	move.w #1, PLAYER_INTERSECT_ENEMY
+	bra.w _lab_461A
+_lab_4612:
+	move.w #0, PLAYER_INTERSECT_ENEMY
+_lab_461A:
+	movem.l (A7)+, D0
+	rts
+
+_lab_4620:
+	addq.w #1, COIN_BLOCK_SUBTIMER
+	cmpi.w #0x10, COIN_BLOCK_SUBTIMER
+	blt.w _lab_4640
+	move.w #0, COIN_BLOCK_SUBTIMER
+	subq.w #1, COIN_BLOCK_TIMER
+_lab_4640:
+	rts
+
+_lab_4642:
+	move.w #0x16, D2
+_lab_4646:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	bne.w _lab_4664
+	cmpi.w #0x18, 0x4(A6,D0.w)
+	bne.w _lab_4664
+	bra.w _lab_46D6
+_lab_4664:
+	cmpi.w #0, 0x8(A6,D0.w)
+	beq.w _lab_46A4
+	cmpi.w #1, 0x8(A6,D0.w)
+	beq.w _lab_46AE
+	cmpi.w #2, 0x8(A6,D0.w)
+	beq.w _lab_46B8
+	cmpi.w #3, 0x8(A6,D0.w)
+	beq.w _lab_46A4
+	cmpi.w #4, 0x8(A6,D0.w)
+	beq.w _lab_46C2
+	cmpi.w #5, 0x8(A6,D0.w)
+	beq.w _lab_46CC
+	bra.w _lab_46AE
+_lab_46A4:
+	jsr (_lab_B5A2).l
+	bra.w _lab_46D6
+_lab_46AE:
+	jsr (_lab_5A94).l
+	bra.w _lab_46D6
+_lab_46B8:
+	jsr (_lab_5E32).l
+	bra.w _lab_46D6
+_lab_46C2:
+	jsr (_lab_5FF6).l
+	bra.w _lab_46D6
+_lab_46CC:
+	jsr (_lab_46E2).l
+	bra.w _lab_46D6
+_lab_46D6:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_4646
+	rts
+
+_lab_46E2:
+	movem.l D2, -(A7)
+	cmpi.w #0, 0x10(A6,D0.w)
+	beq.w _lab_4704
+	lea (_lab_470A).l, A2
+	move.w 0x10(A6,D0.w), D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	jsr (A2)
+_lab_4704:
+	movem.l (A7)+, D2
+	rts
+
+_lab_470A:
+	.long _lab_47F4
+	.long _lab_47F4
+	.long _lab_49E8
+	.long _lab_5A14
+	.long _lab_5A4C
+	.long _lab_4722
+
+_lab_4722:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_476C
+	subq.w #2, 0x2(A6,D0.w)
+	cmpi.w #0xA0, 0x2(A6,D0.w)
+	bgt.w _lab_4740
+	move.b #1, 0x15(A6,D0.w)
+_lab_4740:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_47D2
+	cmpi.w #0x86, 0x4(A6,D0.w)
+	beq.w _lab_4762
+	move.w #0x86, 0x4(A6,D0.w)
+	bra.w _lab_47D2
+_lab_4762:
+	move.w #0x87, 0x4(A6,D0.w)
+	bra.w _lab_47D2
+_lab_476C:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_47B6
+	addq.w #2, 0x2(A6,D0.w)
+	cmpi.w #0x168, 0x2(A6,D0.w)
+	blt.w _lab_478A
+	move.b #0, 0x15(A6,D0.w)
+_lab_478A:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_47D2
+	cmpi.w #0xA6, 0x4(A6,D0.w)
+	beq.w _lab_47AC
+	move.w #0xA6, 0x4(A6,D0.w)
+	bra.w _lab_47D2
+_lab_47AC:
+	move.w #0xA7, 0x4(A6,D0.w)
+	bra.w _lab_47D2
+_lab_47B6:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_47C4
+	bra.w _lab_47D2
+_lab_47C4:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_47D2
+	bra.w _lab_47D2
+_lab_47D2:
+	rts
+
+_lab_47D4:
+	addi.w #0x20, D1
+_lab_47D8:
+	cmpi.w #0, 0x4(A6,D1.w)
+	beq.w _lab_47F2
+	addi.w #0x20, D1
+	cmpi.w #0x660, D1
+	ble.b _lab_47D8
+	move.w #0x2C0, D1
+	bra.b _lab_47D8
+_lab_47F2:
+	rts
+
+_lab_47F4:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_48D8
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x16(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addq.w #0x8, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x18(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x10, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1A(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1C(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x20, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1E(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x28, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_49B6
+_lab_48D8:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_49B6
+	move.w D0, D3
+	move.w 0x16(A6,D0.w), D3
+	move.w 0x12(A6,D0.w), D1
+	addq.w #1, D1
+	mulu.w #4, D1
+	lea (_lab_4BDC).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D3.w)
+
+	move.w 0x18(A6,D0.w), D3
+	lea (_lab_4EB4).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1A(A6,D0.w), D3
+	lea (_lab_518C).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1C(A6,D0.w), D3
+	lea (_lab_5464).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1E(A6,D0.w), D3
+	lea (_lab_573C).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D3.w)
+
+	addq.w #1, 0x12(A6,D0.w)
+	cmpi.w #0xB4, 0x12(A6,D0.w)
+	ble.w _lab_49B6
+	move.w #0, 0x12(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_49B6
+_lab_49B6:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_49E6
+	move.w D0, D1
+	move.w #5, D2
+_lab_49CA:
+	addq.w #1, 0x4(A6,D1.w)
+	cmpi.w #0x4C, 0x4(A6,D1.w)
+	ble.w _lab_49DE
+	move.w #0x49, 0x4(A6,D1.w)
+_lab_49DE:
+	addi.w #0x20, D1
+	dbf D2, _lab_49CA
+_lab_49E6:
+	rts
+
+_lab_49E8:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_4ACC
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x16(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addq.w #0x8, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x18(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x10, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1A(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1C(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x20, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w D1, 0x1E(A6,D0.w)
+	move.w (A6,D0.w), (A6,D1.w)
+	addi.w #0x28, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x49, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_4BAA
+_lab_4ACC:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_4BAA
+	move.w D0, D3
+	move.w 0x16(A6,D0.w), D3
+	move.w 0x12(A6,D0.w), D1
+	addq.w #1, D1
+	mulu.w #4, D1
+	lea (_lab_4BDC).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	sub.w D2, 0x2(A6,D3.w)
+
+	move.w 0x18(A6,D0.w), D3
+	lea (_lab_4EB4).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	sub.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1A(A6,D0.w), D3
+	lea (_lab_518C).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	sub.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1C(A6,D0.w), D3
+	lea (_lab_5464).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	sub.w D2, 0x2(A6,D3.w)
+
+	move.w 0x1E(A6,D0.w), D3
+	lea (_lab_573C).l, A2
+	move.w (A2,D1.w), D2
+	sub.w -0x4(A2,D1.w), D2
+	add.w D2, (A6,D3.w)
+	move.w 0x2(A2,D1.w), D2
+	sub.w -0x2(A2,D1.w), D2
+	sub.w D2, 0x2(A6,D3.w)
+
+	addq.w #1, 0x12(A6,D0.w)
+	cmpi.w #0xB4, 0x12(A6,D0.w)
+	ble.w _lab_4BAA
+	move.w #0, 0x12(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_4BAA
+_lab_4BAA:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_4BDA
+	move.w D0, D1
+	move.w #5, D2
+_lab_4BBE:
+	addq.w #1, 0x4(A6,D1.w)
+	cmpi.w #0x4C, 0x4(A6,D1.w)
+	ble.w _lab_4BD2
+	move.w #0x49, 0x4(A6,D1.w)
+_lab_4BD2:
+	addi.w #0x20, D1
+	dbf D2, _lab_4BBE
+_lab_4BDA:
+	rts
+
+_lab_4BDC:
+	.word 0x37,0x2F
+	.word 0x37,0x2F
+	.word 0x37,0x2F
+	.word 0x37,0x2F
+	.word 0x37,0x2E
+	.word 0x37,0x2E
+	.word 0x37,0x2E
+	.word 0x37,0x2E
+	.word 0x37,0x2D
+	.word 0x37,0x2D
+	.word 0x37,0x2D
+	.word 0x37,0x2D
+	.word 0x37,0x2C
+	.word 0x37,0x2C
+	.word 0x37,0x2C
+	.word 0x36,0x2B
+	.word 0x36,0x2B
+	.word 0x36,0x2B
+	.word 0x36,0x2B
+	.word 0x36,0x2B
+	.word 0x36,0x2A
+	.word 0x35,0x2A
+	.word 0x35,0x2A
+	.word 0x35,0x2A
+	.word 0x35,0x2A
+	.word 0x35,0x29
+	.word 0x34,0x29
+	.word 0x34,0x29
+	.word 0x34,0x29
+	.word 0x34,0x29
+	.word 0x33,0x29
+	.word 0x33,0x28
+	.word 0x33,0x28
+	.word 0x33,0x28
+	.word 0x32,0x28
+	.word 0x32,0x28
+	.word 0x32,0x28
+	.word 0x32,0x28
+	.word 0x31,0x28
+	.word 0x31,0x28
+	.word 0x31,0x28
+	.word 0x31,0x28
+	.word 0x30,0x28
+	.word 0x30,0x28
+	.word 0x30,0x28
+	.word 0x2F,0x28
+	.word 0x2F,0x28
+	.word 0x2F,0x28
+	.word 0x2F,0x28
+	.word 0x2E,0x28
+	.word 0x2E,0x28
+	.word 0x2E,0x28
+	.word 0x2E,0x28
+	.word 0x2D,0x28
+	.word 0x2D,0x28
+	.word 0x2D,0x28
+	.word 0x2D,0x28
+	.word 0x2C,0x28
+	.word 0x2C,0x28
+	.word 0x2C,0x28
+	.word 0x2B,0x29
+	.word 0x2B,0x29
+	.word 0x2B,0x29
+	.word 0x2B,0x29
+	.word 0x2B,0x29
+	.word 0x2A,0x29
+	.word 0x2A,0x2A
+	.word 0x2A,0x2A
+	.word 0x2A,0x2A
+	.word 0x2A,0x2A
+	.word 0x29,0x2A
+	.word 0x29,0x2B
+	.word 0x29,0x2B
+	.word 0x29,0x2B
+	.word 0x29,0x2B
+	.word 0x29,0x2C
+	.word 0x28,0x2C
+	.word 0x28,0x2C
+	.word 0x28,0x2C
+	.word 0x28,0x2D
+	.word 0x28,0x2D
+	.word 0x28,0x2D
+	.word 0x28,0x2D
+	.word 0x28,0x2E
+	.word 0x28,0x2E
+	.word 0x28,0x2E
+	.word 0x28,0x2E
+	.word 0x28,0x2F
+	.word 0x28,0x2F
+	.word 0x28,0x2F
+	.word 0x28,0x30
+	.word 0x28,0x30
+	.word 0x28,0x30
+	.word 0x28,0x30
+	.word 0x28,0x31
+	.word 0x28,0x31
+	.word 0x28,0x31
+	.word 0x28,0x31
+	.word 0x28,0x32
+	.word 0x28,0x32
+	.word 0x28,0x32
+	.word 0x28,0x32
+	.word 0x28,0x33
+	.word 0x28,0x33
+	.word 0x28,0x33
+	.word 0x29,0x34
+	.word 0x29,0x34
+	.word 0x29,0x34
+	.word 0x29,0x34
+	.word 0x29,0x34
+	.word 0x29,0x35
+	.word 0x2A,0x35
+	.word 0x2A,0x35
+	.word 0x2A,0x35
+	.word 0x2A,0x35
+	.word 0x2A,0x36
+	.word 0x2B,0x36
+	.word 0x2B,0x36
+	.word 0x2B,0x36
+	.word 0x2B,0x36
+	.word 0x2C,0x36
+	.word 0x2C,0x37
+	.word 0x2C,0x37
+	.word 0x2C,0x37
+	.word 0x2D,0x37
+	.word 0x2D,0x37
+	.word 0x2D,0x37
+	.word 0x2D,0x37
+	.word 0x2E,0x37
+	.word 0x2E,0x37
+	.word 0x2E,0x37
+	.word 0x2E,0x37
+	.word 0x2F,0x37
+	.word 0x2F,0x37
+	.word 0x2F,0x37
+	.word 0x30,0x37
+	.word 0x30,0x37
+	.word 0x30,0x37
+	.word 0x30,0x37
+	.word 0x31,0x37
+	.word 0x31,0x37
+	.word 0x31,0x37
+	.word 0x31,0x37
+	.word 0x32,0x37
+	.word 0x32,0x37
+	.word 0x32,0x37
+	.word 0x32,0x37
+	.word 0x33,0x37
+	.word 0x33,0x37
+	.word 0x33,0x37
+	.word 0x34,0x36
+	.word 0x34,0x36
+	.word 0x34,0x36
+	.word 0x34,0x36
+	.word 0x34,0x36
+	.word 0x35,0x36
+	.word 0x35,0x35
+	.word 0x35,0x35
+	.word 0x35,0x35
+	.word 0x35,0x35
+	.word 0x36,0x35
+	.word 0x36,0x34
+	.word 0x36,0x34
+	.word 0x36,0x34
+	.word 0x36,0x34
+	.word 0x36,0x33
+	.word 0x37,0x33
+	.word 0x37,0x33
+	.word 0x37,0x33
+	.word 0x37,0x32
+	.word 0x37,0x32
+	.word 0x37,0x32
+	.word 0x37,0x32
+	.word 0x37,0x31
+	.word 0x37,0x31
+	.word 0x37,0x31
+	.word 0x37,0x31
+	.word 0x37,0x30
+	.word 0x37,0x30
+	.word 0x37,0x30
+	.word 0x38,0x30
+	.word 0x37,0x2F
+
+_lab_4EB4:
+	.word 0x3F,0x2F
+	.word 0x3F,0x2F
+	.word 0x3F,0x2E
+	.word 0x3F,0x2E
+	.word 0x3F,0x2D
+	.word 0x3F,0x2D
+	.word 0x3F,0x2C
+	.word 0x3F,0x2C
+	.word 0x3F,0x2B
+	.word 0x3F,0x2B
+	.word 0x3F,0x2A
+	.word 0x3E,0x2A
+	.word 0x3E,0x29
+	.word 0x3E,0x28
+	.word 0x3E,0x28
+	.word 0x3D,0x27
+	.word 0x3D,0x27
+	.word 0x3D,0x27
+	.word 0x3C,0x26
+	.word 0x3C,0x26
+	.word 0x3C,0x25
+	.word 0x3B,0x25
+	.word 0x3B,0x24
+	.word 0x3B,0x24
+	.word 0x3A,0x24
+	.word 0x3A,0x23
+	.word 0x39,0x23
+	.word 0x39,0x23
+	.word 0x38,0x22
+	.word 0x38,0x22
+	.word 0x37,0x22
+	.word 0x37,0x21
+	.word 0x37,0x21
+	.word 0x36,0x21
+	.word 0x35,0x21
+	.word 0x35,0x20
+	.word 0x34,0x20
+	.word 0x34,0x20
+	.word 0x33,0x20
+	.word 0x33,0x20
+	.word 0x32,0x20
+	.word 0x32,0x20
+	.word 0x31,0x20
+	.word 0x31,0x20
+	.word 0x30,0x20
+	.word 0x2F,0x20
+	.word 0x2F,0x20
+	.word 0x2E,0x20
+	.word 0x2E,0x20
+	.word 0x2D,0x20
+	.word 0x2D,0x20
+	.word 0x2C,0x20
+	.word 0x2C,0x20
+	.word 0x2B,0x20
+	.word 0x2B,0x20
+	.word 0x2A,0x20
+	.word 0x2A,0x21
+	.word 0x29,0x21
+	.word 0x28,0x21
+	.word 0x28,0x21
+	.word 0x27,0x22
+	.word 0x27,0x22
+	.word 0x27,0x22
+	.word 0x26,0x23
+	.word 0x26,0x23
+	.word 0x25,0x23
+	.word 0x25,0x24
+	.word 0x24,0x24
+	.word 0x24,0x24
+	.word 0x24,0x25
+	.word 0x23,0x25
+	.word 0x23,0x26
+	.word 0x23,0x26
+	.word 0x22,0x27
+	.word 0x22,0x27
+	.word 0x22,0x28
+	.word 0x21,0x28
+	.word 0x21,0x28
+	.word 0x21,0x29
+	.word 0x21,0x2A
+	.word 0x20,0x2A
+	.word 0x20,0x2B
+	.word 0x20,0x2B
+	.word 0x20,0x2C
+	.word 0x20,0x2C
+	.word 0x20,0x2D
+	.word 0x20,0x2D
+	.word 0x20,0x2E
+	.word 0x20,0x2E
+	.word 0x20,0x2F
+	.word 0x20,0x30
+	.word 0x20,0x30
+	.word 0x20,0x31
+	.word 0x20,0x31
+	.word 0x20,0x32
+	.word 0x20,0x32
+	.word 0x20,0x33
+	.word 0x20,0x33
+	.word 0x20,0x34
+	.word 0x20,0x34
+	.word 0x20,0x35
+	.word 0x21,0x35
+	.word 0x21,0x36
+	.word 0x21,0x37
+	.word 0x21,0x37
+	.word 0x22,0x38
+	.word 0x22,0x38
+	.word 0x22,0x38
+	.word 0x23,0x39
+	.word 0x23,0x39
+	.word 0x23,0x3A
+	.word 0x24,0x3A
+	.word 0x24,0x3B
+	.word 0x24,0x3B
+	.word 0x25,0x3B
+	.word 0x25,0x3C
+	.word 0x26,0x3C
+	.word 0x26,0x3C
+	.word 0x27,0x3D
+	.word 0x27,0x3D
+	.word 0x28,0x3D
+	.word 0x28,0x3E
+	.word 0x28,0x3E
+	.word 0x29,0x3E
+	.word 0x2A,0x3E
+	.word 0x2A,0x3F
+	.word 0x2B,0x3F
+	.word 0x2B,0x3F
+	.word 0x2C,0x3F
+	.word 0x2C,0x3F
+	.word 0x2D,0x3F
+	.word 0x2D,0x3F
+	.word 0x2E,0x3F
+	.word 0x2E,0x3F
+	.word 0x2F,0x3F
+	.word 0x30,0x3F
+	.word 0x30,0x3F
+	.word 0x31,0x3F
+	.word 0x31,0x3F
+	.word 0x32,0x3F
+	.word 0x32,0x3F
+	.word 0x33,0x3F
+	.word 0x33,0x3F
+	.word 0x34,0x3F
+	.word 0x34,0x3F
+	.word 0x35,0x3F
+	.word 0x35,0x3E
+	.word 0x36,0x3E
+	.word 0x37,0x3E
+	.word 0x37,0x3E
+	.word 0x38,0x3D
+	.word 0x38,0x3D
+	.word 0x38,0x3D
+	.word 0x39,0x3C
+	.word 0x39,0x3C
+	.word 0x3A,0x3C
+	.word 0x3A,0x3B
+	.word 0x3B,0x3B
+	.word 0x3B,0x3B
+	.word 0x3B,0x3A
+	.word 0x3C,0x3A
+	.word 0x3C,0x39
+	.word 0x3C,0x39
+	.word 0x3D,0x38
+	.word 0x3D,0x38
+	.word 0x3D,0x37
+	.word 0x3E,0x37
+	.word 0x3E,0x37
+	.word 0x3E,0x36
+	.word 0x3E,0x35
+	.word 0x3F,0x35
+	.word 0x3F,0x34
+	.word 0x3F,0x34
+	.word 0x3F,0x33
+	.word 0x3F,0x33
+	.word 0x3F,0x32
+	.word 0x3F,0x32
+	.word 0x3F,0x31
+	.word 0x3F,0x31
+	.word 0x3F,0x30
+	.word 0x40,0x30
+	.word 0x3F,0x2F
+
+_lab_518C:
+	.word 0x47,0x2F
+	.word 0x47,0x2F
+	.word 0x47,0x2E
+	.word 0x47,0x2D
+	.word 0x47,0x2C
+	.word 0x47,0x2B
+	.word 0x47,0x2B
+	.word 0x47,0x2A
+	.word 0x47,0x29
+	.word 0x46,0x28
+	.word 0x46,0x27
+	.word 0x46,0x27
+	.word 0x45,0x26
+	.word 0x45,0x25
+	.word 0x45,0x24
+	.word 0x44,0x23
+	.word 0x44,0x23
+	.word 0x43,0x22
+	.word 0x43,0x21
+	.word 0x42,0x21
+	.word 0x42,0x20
+	.word 0x41,0x1F
+	.word 0x41,0x1F
+	.word 0x40,0x1E
+	.word 0x40,0x1E
+	.word 0x3F,0x1D
+	.word 0x3E,0x1D
+	.word 0x3E,0x1C
+	.word 0x3D,0x1C
+	.word 0x3C,0x1B
+	.word 0x3B,0x1B
+	.word 0x3B,0x1A
+	.word 0x3A,0x1A
+	.word 0x39,0x1A
+	.word 0x38,0x19
+	.word 0x38,0x19
+	.word 0x37,0x19
+	.word 0x36,0x18
+	.word 0x35,0x18
+	.word 0x34,0x18
+	.word 0x34,0x18
+	.word 0x33,0x18
+	.word 0x32,0x18
+	.word 0x31,0x18
+	.word 0x30,0x18
+	.word 0x2F,0x18
+	.word 0x2F,0x18
+	.word 0x2E,0x18
+	.word 0x2D,0x18
+	.word 0x2C,0x18
+	.word 0x2B,0x18
+	.word 0x2B,0x18
+	.word 0x2A,0x18
+	.word 0x29,0x18
+	.word 0x28,0x19
+	.word 0x27,0x19
+	.word 0x27,0x19
+	.word 0x26,0x1A
+	.word 0x25,0x1A
+	.word 0x24,0x1A
+	.word 0x23,0x1B
+	.word 0x23,0x1B
+	.word 0x22,0x1C
+	.word 0x21,0x1C
+	.word 0x21,0x1D
+	.word 0x20,0x1D
+	.word 0x1F,0x1E
+	.word 0x1F,0x1E
+	.word 0x1E,0x1F
+	.word 0x1E,0x1F
+	.word 0x1D,0x20
+	.word 0x1D,0x21
+	.word 0x1C,0x21
+	.word 0x1C,0x22
+	.word 0x1B,0x23
+	.word 0x1B,0x24
+	.word 0x1A,0x24
+	.word 0x1A,0x25
+	.word 0x1A,0x26
+	.word 0x19,0x27
+	.word 0x19,0x27
+	.word 0x19,0x28
+	.word 0x18,0x29
+	.word 0x18,0x2A
+	.word 0x18,0x2B
+	.word 0x18,0x2B
+	.word 0x18,0x2C
+	.word 0x18,0x2D
+	.word 0x18,0x2E
+	.word 0x18,0x2F
+	.word 0x18,0x30
+	.word 0x18,0x30
+	.word 0x18,0x31
+	.word 0x18,0x32
+	.word 0x18,0x33
+	.word 0x18,0x34
+	.word 0x18,0x34
+	.word 0x18,0x35
+	.word 0x18,0x36
+	.word 0x19,0x37
+	.word 0x19,0x38
+	.word 0x19,0x38
+	.word 0x1A,0x39
+	.word 0x1A,0x3A
+	.word 0x1A,0x3B
+	.word 0x1B,0x3C
+	.word 0x1B,0x3C
+	.word 0x1C,0x3D
+	.word 0x1C,0x3E
+	.word 0x1D,0x3E
+	.word 0x1D,0x3F
+	.word 0x1E,0x40
+	.word 0x1E,0x40
+	.word 0x1F,0x41
+	.word 0x1F,0x41
+	.word 0x20,0x42
+	.word 0x21,0x42
+	.word 0x21,0x43
+	.word 0x22,0x43
+	.word 0x23,0x44
+	.word 0x24,0x44
+	.word 0x24,0x45
+	.word 0x25,0x45
+	.word 0x26,0x45
+	.word 0x27,0x46
+	.word 0x27,0x46
+	.word 0x28,0x46
+	.word 0x29,0x47
+	.word 0x2A,0x47
+	.word 0x2B,0x47
+	.word 0x2B,0x47
+	.word 0x2C,0x47
+	.word 0x2D,0x47
+	.word 0x2E,0x47
+	.word 0x2F,0x47
+	.word 0x30,0x47
+	.word 0x30,0x47
+	.word 0x31,0x47
+	.word 0x32,0x47
+	.word 0x33,0x47
+	.word 0x34,0x47
+	.word 0x34,0x47
+	.word 0x35,0x47
+	.word 0x36,0x47
+	.word 0x37,0x46
+	.word 0x38,0x46
+	.word 0x38,0x46
+	.word 0x39,0x45
+	.word 0x3A,0x45
+	.word 0x3B,0x45
+	.word 0x3C,0x44
+	.word 0x3C,0x44
+	.word 0x3D,0x43
+	.word 0x3E,0x43
+	.word 0x3E,0x42
+	.word 0x3F,0x42
+	.word 0x40,0x41
+	.word 0x40,0x41
+	.word 0x41,0x40
+	.word 0x41,0x40
+	.word 0x42,0x3F
+	.word 0x42,0x3E
+	.word 0x43,0x3E
+	.word 0x43,0x3D
+	.word 0x44,0x3C
+	.word 0x44,0x3B
+	.word 0x45,0x3B
+	.word 0x45,0x3A
+	.word 0x45,0x39
+	.word 0x46,0x38
+	.word 0x46,0x38
+	.word 0x46,0x37
+	.word 0x47,0x36
+	.word 0x47,0x35
+	.word 0x47,0x34
+	.word 0x47,0x34
+	.word 0x47,0x33
+	.word 0x47,0x32
+	.word 0x47,0x31
+	.word 0x47,0x30
+	.word 0x48,0x30
+	.word 0x47,0x2F
+
+_lab_5464:
+	.word 0x4F,0x2F
+	.word 0x4F,0x2E
+	.word 0x4F,0x2D
+	.word 0x4F,0x2C
+	.word 0x4F,0x2B
+	.word 0x4F,0x2A
+	.word 0x4F,0x29
+	.word 0x4F,0x28
+	.word 0x4E,0x27
+	.word 0x4E,0x26
+	.word 0x4E,0x25
+	.word 0x4D,0x24
+	.word 0x4D,0x22
+	.word 0x4C,0x21
+	.word 0x4C,0x20
+	.word 0x4B,0x1F
+	.word 0x4B,0x1F
+	.word 0x4A,0x1E
+	.word 0x49,0x1D
+	.word 0x49,0x1C
+	.word 0x48,0x1B
+	.word 0x47,0x1A
+	.word 0x47,0x19
+	.word 0x46,0x18
+	.word 0x45,0x18
+	.word 0x44,0x17
+	.word 0x43,0x16
+	.word 0x42,0x16
+	.word 0x41,0x15
+	.word 0x40,0x14
+	.word 0x3F,0x14
+	.word 0x3F,0x13
+	.word 0x3E,0x13
+	.word 0x3D,0x12
+	.word 0x3B,0x12
+	.word 0x3A,0x11
+	.word 0x39,0x11
+	.word 0x38,0x11
+	.word 0x37,0x10
+	.word 0x36,0x10
+	.word 0x35,0x10
+	.word 0x34,0x10
+	.word 0x33,0x10
+	.word 0x32,0x10
+	.word 0x31,0x10
+	.word 0x2F,0x10
+	.word 0x2E,0x10
+	.word 0x2D,0x10
+	.word 0x2C,0x10
+	.word 0x2B,0x10
+	.word 0x2A,0x10
+	.word 0x29,0x10
+	.word 0x28,0x10
+	.word 0x27,0x11
+	.word 0x26,0x11
+	.word 0x25,0x11
+	.word 0x24,0x12
+	.word 0x22,0x12
+	.word 0x21,0x13
+	.word 0x20,0x13
+	.word 0x1F,0x14
+	.word 0x1F,0x14
+	.word 0x1E,0x15
+	.word 0x1D,0x16
+	.word 0x1C,0x16
+	.word 0x1B,0x17
+	.word 0x1A,0x18
+	.word 0x19,0x18
+	.word 0x18,0x19
+	.word 0x18,0x1A
+	.word 0x17,0x1B
+	.word 0x16,0x1C
+	.word 0x16,0x1D
+	.word 0x15,0x1E
+	.word 0x14,0x1F
+	.word 0x14,0x20
+	.word 0x13,0x20
+	.word 0x13,0x21
+	.word 0x12,0x22
+	.word 0x12,0x24
+	.word 0x11,0x25
+	.word 0x11,0x26
+	.word 0x11,0x27
+	.word 0x10,0x28
+	.word 0x10,0x29
+	.word 0x10,0x2A
+	.word 0x10,0x2B
+	.word 0x10,0x2C
+	.word 0x10,0x2D
+	.word 0x10,0x2E
+	.word 0x10,0x30
+	.word 0x10,0x31
+	.word 0x10,0x32
+	.word 0x10,0x33
+	.word 0x10,0x34
+	.word 0x10,0x35
+	.word 0x10,0x36
+	.word 0x10,0x37
+	.word 0x11,0x38
+	.word 0x11,0x39
+	.word 0x11,0x3A
+	.word 0x12,0x3B
+	.word 0x12,0x3D
+	.word 0x13,0x3E
+	.word 0x13,0x3F
+	.word 0x14,0x40
+	.word 0x14,0x40
+	.word 0x15,0x41
+	.word 0x16,0x42
+	.word 0x16,0x43
+	.word 0x17,0x44
+	.word 0x18,0x45
+	.word 0x18,0x46
+	.word 0x19,0x47
+	.word 0x1A,0x47
+	.word 0x1B,0x48
+	.word 0x1C,0x49
+	.word 0x1D,0x49
+	.word 0x1E,0x4A
+	.word 0x1F,0x4B
+	.word 0x20,0x4B
+	.word 0x20,0x4C
+	.word 0x21,0x4C
+	.word 0x22,0x4D
+	.word 0x24,0x4D
+	.word 0x25,0x4E
+	.word 0x26,0x4E
+	.word 0x27,0x4E
+	.word 0x28,0x4F
+	.word 0x29,0x4F
+	.word 0x2A,0x4F
+	.word 0x2B,0x4F
+	.word 0x2C,0x4F
+	.word 0x2D,0x4F
+	.word 0x2E,0x4F
+	.word 0x30,0x4F
+	.word 0x31,0x4F
+	.word 0x32,0x4F
+	.word 0x33,0x4F
+	.word 0x34,0x4F
+	.word 0x35,0x4F
+	.word 0x36,0x4F
+	.word 0x37,0x4F
+	.word 0x38,0x4E
+	.word 0x39,0x4E
+	.word 0x3A,0x4E
+	.word 0x3B,0x4D
+	.word 0x3D,0x4D
+	.word 0x3E,0x4C
+	.word 0x3F,0x4C
+	.word 0x40,0x4B
+	.word 0x40,0x4B
+	.word 0x41,0x4A
+	.word 0x42,0x49
+	.word 0x43,0x49
+	.word 0x44,0x48
+	.word 0x45,0x47
+	.word 0x46,0x47
+	.word 0x47,0x46
+	.word 0x47,0x45
+	.word 0x48,0x44
+	.word 0x49,0x43
+	.word 0x49,0x42
+	.word 0x4A,0x41
+	.word 0x4B,0x40
+	.word 0x4B,0x3F
+	.word 0x4C,0x3F
+	.word 0x4C,0x3E
+	.word 0x4D,0x3D
+	.word 0x4D,0x3B
+	.word 0x4E,0x3A
+	.word 0x4E,0x39
+	.word 0x4E,0x38
+	.word 0x4F,0x37
+	.word 0x4F,0x36
+	.word 0x4F,0x35
+	.word 0x4F,0x34
+	.word 0x4F,0x33
+	.word 0x4F,0x32
+	.word 0x4F,0x31
+	.word 0x50,0x30
+	.word 0x4F,0x2F
+
+_lab_573C:
+	.word 0x57,0x2F
+	.word 0x57,0x2E
+	.word 0x57,0x2D
+	.word 0x57,0x2B
+	.word 0x57,0x2A
+	.word 0x57,0x29
+	.word 0x57,0x27
+	.word 0x56,0x26
+	.word 0x56,0x24
+	.word 0x56,0x23
+	.word 0x55,0x22
+	.word 0x55,0x21
+	.word 0x54,0x1F
+	.word 0x53,0x1E
+	.word 0x53,0x1D
+	.word 0x52,0x1B
+	.word 0x51,0x1A
+	.word 0x51,0x19
+	.word 0x50,0x18
+	.word 0x4F,0x17
+	.word 0x4E,0x16
+	.word 0x4D,0x15
+	.word 0x4C,0x14
+	.word 0x4B,0x13
+	.word 0x4A,0x12
+	.word 0x49,0x11
+	.word 0x48,0x10
+	.word 0x47,0x0F
+	.word 0x46,0x0E
+	.word 0x45,0x0E
+	.word 0x43,0x0D
+	.word 0x42,0x0C
+	.word 0x41,0x0C
+	.word 0x40,0x0B
+	.word 0x3E,0x0A
+	.word 0x3D,0x0A
+	.word 0x3C,0x09
+	.word 0x3B,0x09
+	.word 0x39,0x09
+	.word 0x38,0x08
+	.word 0x36,0x08
+	.word 0x35,0x08
+	.word 0x34,0x08
+	.word 0x32,0x08
+	.word 0x31,0x08
+	.word 0x2F,0x08
+	.word 0x2E,0x08
+	.word 0x2D,0x08
+	.word 0x2B,0x08
+	.word 0x2A,0x08
+	.word 0x29,0x08
+	.word 0x27,0x08
+	.word 0x26,0x09
+	.word 0x24,0x09
+	.word 0x23,0x09
+	.word 0x22,0x0A
+	.word 0x21,0x0A
+	.word 0x1F,0x0B
+	.word 0x1E,0x0C
+	.word 0x1D,0x0C
+	.word 0x1B,0x0D
+	.word 0x1A,0x0E
+	.word 0x19,0x0E
+	.word 0x18,0x0F
+	.word 0x17,0x10
+	.word 0x16,0x11
+	.word 0x15,0x12
+	.word 0x14,0x13
+	.word 0x13,0x14
+	.word 0x12,0x15
+	.word 0x11,0x16
+	.word 0x10,0x17
+	.word 0x0F,0x18
+	.word 0x0E,0x19
+	.word 0x0E,0x1A
+	.word 0x0D,0x1C
+	.word 0x0C,0x1D
+	.word 0x0C,0x1E
+	.word 0x0B,0x1F
+	.word 0x0A,0x21
+	.word 0x0A,0x22
+	.word 0x09,0x23
+	.word 0x09,0x24
+	.word 0x09,0x26
+	.word 0x08,0x27
+	.word 0x08,0x29
+	.word 0x08,0x2A
+	.word 0x08,0x2B
+	.word 0x08,0x2D
+	.word 0x08,0x2E
+	.word 0x08,0x30
+	.word 0x08,0x31
+	.word 0x08,0x32
+	.word 0x08,0x34
+	.word 0x08,0x35
+	.word 0x08,0x36
+	.word 0x08,0x38
+	.word 0x09,0x39
+	.word 0x09,0x3B
+	.word 0x09,0x3C
+	.word 0x0A,0x3D
+	.word 0x0A,0x3E
+	.word 0x0B,0x40
+	.word 0x0C,0x41
+	.word 0x0C,0x42
+	.word 0x0D,0x44
+	.word 0x0E,0x45
+	.word 0x0E,0x46
+	.word 0x0F,0x47
+	.word 0x10,0x48
+	.word 0x11,0x49
+	.word 0x12,0x4A
+	.word 0x13,0x4B
+	.word 0x14,0x4C
+	.word 0x15,0x4D
+	.word 0x16,0x4E
+	.word 0x17,0x4F
+	.word 0x18,0x50
+	.word 0x19,0x51
+	.word 0x1A,0x51
+	.word 0x1C,0x52
+	.word 0x1D,0x53
+	.word 0x1E,0x53
+	.word 0x1F,0x54
+	.word 0x21,0x55
+	.word 0x22,0x55
+	.word 0x23,0x56
+	.word 0x24,0x56
+	.word 0x26,0x56
+	.word 0x27,0x57
+	.word 0x29,0x57
+	.word 0x2A,0x57
+	.word 0x2B,0x57
+	.word 0x2D,0x57
+	.word 0x2E,0x57
+	.word 0x30,0x57
+	.word 0x31,0x57
+	.word 0x32,0x57
+	.word 0x34,0x57
+	.word 0x35,0x57
+	.word 0x36,0x57
+	.word 0x38,0x57
+	.word 0x39,0x56
+	.word 0x3B,0x56
+	.word 0x3C,0x56
+	.word 0x3D,0x55
+	.word 0x3E,0x55
+	.word 0x40,0x54
+	.word 0x41,0x53
+	.word 0x42,0x53
+	.word 0x44,0x52
+	.word 0x45,0x51
+	.word 0x46,0x51
+	.word 0x47,0x50
+	.word 0x48,0x4F
+	.word 0x49,0x4E
+	.word 0x4A,0x4D
+	.word 0x4B,0x4C
+	.word 0x4C,0x4B
+	.word 0x4D,0x4A
+	.word 0x4E,0x49
+	.word 0x4F,0x48
+	.word 0x50,0x47
+	.word 0x51,0x46
+	.word 0x51,0x45
+	.word 0x52,0x43
+	.word 0x53,0x42
+	.word 0x53,0x41
+	.word 0x54,0x40
+	.word 0x55,0x3E
+	.word 0x55,0x3D
+	.word 0x56,0x3C
+	.word 0x56,0x3B
+	.word 0x56,0x39
+	.word 0x57,0x38
+	.word 0x57,0x36
+	.word 0x57,0x35
+	.word 0x57,0x34
+	.word 0x57,0x32
+	.word 0x57,0x31
+	.word 0x58,0x30
+	.word 0x57,0x2F
+
+_lab_5A14:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_5A36
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0x85, 0x4(A6,D0.w)
+	ble.w _lab_5A36
+	move.w #0x83, 0x4(A6,D0.w)
+_lab_5A36:
+	subq.w #1, (A6,D0.w)
+	cmpi.w #0x28, (A6,D0.w)
+	bgt.w _lab_5A4A
+	move.w #0x180, (A6,D0.w)
+_lab_5A4A:
+	rts
+
+_lab_5A4C:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_5A6E
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0x85, 0x4(A6,D0.w)
+	ble.w _lab_5A6E
+	move.w #0x83, 0x4(A6,D0.w)
+_lab_5A6E:
+	cmpi.w #0x110, 0x2(A6,D0.w)
+	beq.w _lab_5A7C
+	addq.w #1, 0x2(A6,D0.w)
+_lab_5A7C:
+	subq.w #1, (A6,D0.w)
+	cmpi.w #0x50, (A6,D0.w)
+	bgt.w _lab_5A92
+	move.w D0, D1
+	jsr (_lab_CF24).l
+_lab_5A92:
+	rts
+
+_lab_5A94:
+	movem.l D2, -(A7)
+	cmpi.w #0, 0x10(A6,D0.w)
+	beq.w _lab_5AB6
+	lea (_lab_5ABC).l, A2
+	move.w 0x10(A6,D0.w), D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	jsr (A2)
+_lab_5AB6:
+	movem.l (A7)+, D2
+	rts
+
+_lab_5ABC:
+	.long _lab_5B24
+	.long _lab_5B24
+	.long _lab_5B4A
+	.long _lab_5B70
+	.long _lab_5BEA
+	.long _lab_5C94
+	.long _lab_5D68
+	.long _lab_5BEA
+	.long _lab_5AE0
+
+_lab_5AE0:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_5B10
+_lab_5AEE:
+	movem.l D0, -(A7)
+	jsr (_lab_C264).l
+	movem.l (A7)+, D0
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0xBB, 0x4(A6,D0.w)
+	ble.w _lab_5B10
+	move.w #0xB9, 0x4(A6,D0.w)
+_lab_5B10:
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5B22
+	move.w #2, FIGHT_STAGE
+_lab_5B22:
+	rts
+
+_lab_5B24:
+	addq.w #1, 0x2(A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5B38
+	addq.w #1, PLR_POS_Y
+_lab_5B38:
+	cmpi.w #0x160, 0x2(A6,D0.w)
+	blt.w _lab_5B48
+	move.w #0x78, 0x2(A6,D0.w)
+_lab_5B48:
+	rts
+
+_lab_5B4A:
+	subq.w #1, 0x2(A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5B5E
+	subq.w #1, PLR_POS_Y
+_lab_5B5E:
+	cmpi.w #0x78, 0x2(A6,D0.w)
+	bgt.w _lab_5B6E
+	move.w #0x160, 0x2(A6,D0.w)
+_lab_5B6E:
+	rts
+
+_lab_5B70:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_5BAC
+	subq.w #1, 0x2(A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5B8E
+	subq.w #1, PLR_POS_Y
+_lab_5B8E:
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	blt.w _lab_5BE8
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_5BE8
+_lab_5BAC:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_5BE8
+	addq.w #1, 0x2(A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5BCA
+	addq.w #1, PLR_POS_Y
+_lab_5BCA:
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	blt.w _lab_5BE8
+	move.b #0, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_5BE8
+_lab_5BE8:
+	rts
+
+_lab_5BEA:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_5C26
+	subq.w #1, (A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5C08
+	subq.w #1, PLR_POS_X
+_lab_5C08:
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	blt.w _lab_5C92
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_5C92
+_lab_5C26:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_5C92
+	addq.w #1, (A6,D0.w)
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5C74
+	cmpi.w #0xF0, PLR_POS_X
+	blt.w _lab_5C6E
+	cmpi.w #1, SCROLL_LOCK
+	beq.w _lab_5C6E
+	addq.w #1, SCROLL_OFFSET
+	addq.w #1, ENTITY_DRIFT
+	move.w #1, DO_SCROLLING
+	bra.w _lab_5C74
+_lab_5C6E:
+	addq.w #1, PLR_POS_X
+_lab_5C74:
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	blt.w _lab_5C92
+	move.b #0, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_5C92
+_lab_5C92:
+	rts
+
+_lab_5C94:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_5CDA
+	cmpi.w #7, 0xFF7148
+	bne.w _lab_5CB4
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_5D66
+_lab_5CB4:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_5D66
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0x7B, 0x4(A6,D0.w)
+	ble.w _lab_5D66
+	move.w #0x79, 0x4(A6,D0.w)
+	bra.w _lab_5D66
+_lab_5CDA:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_5D66
+	addq.w #2, 0x2(A6,D0.w)
+	cmpi.w #0x12A, 0x2(A6,D0.w)
+	blt.w _lab_5D32
+	move.b #2, 0x15(A6,D0.w)
+	move.w #1, 0xFF714E
+	move.b #0, 0xFF7156
+	move.b #0, 0xFF7157
+	addi.w #0xA, PLR_POS_X
+	move.w #1, LEVEL_COMPLETED
+	move.w #6, 0xFF6C00
+	jsr (play_music).l
+	bra.w _lab_5D66
+_lab_5D32:
+	jsr (_lab_C52A).l
+	cmpi.w #0x1, TILE_GROUND
+	beq.w _lab_5D66
+	cmpi.w #0x5, TILE_GROUND
+	beq.w _lab_5D66
+	cmpi.w #0x10, TILE_GROUND
+	beq.w _lab_5D66
+	addq.w #2, PLR_POS_Y
+	bra.w _lab_5D66
+_lab_5D66:
+	rts
+
+_lab_5D68:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_5D94
+	cmpi.b #1, 0x12(A6,D0.w)
+	bne.w _lab_5DE6
+	move.w #0xA2, 0x4(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	move.w #2, 0xFF7148
+	bra.w _lab_5DE6
+_lab_5D94:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_5DE6
+	lea (_lab_5DE8).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	cmpi.w #0xFFFF, D2
+	bne.w _lab_5DD8
+	move.b #0, 0x17(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	move.w #0, 0xFF7148
+	move.w #0xA1, 0x4(A6,D0.w)
+	bra.w _lab_5DE6
+_lab_5DD8:
+	sub.w D2, PLR_POS_Y
+	addq.b #1, 0x17(A6,D0.w)
+	bra.w _lab_5DE6
+_lab_5DE6:
+	rts
+
+_lab_5DE8:
+	.word 0x0001
+	.word 0x0001
+	.word 0x0001
+	.word 0x0001
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x0007
+	.word 0x0007
+	.word 0x0007
+	.word 0x0007
+	.word 0x0008
+	.word 0x0008
+	.word 0xFFFF
+
+_lab_5E32:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_5E5A
+	cmpi.w #0x40, 0x4(A6,D0.w)
+	beq.w _lab_5E54
+	move.w #0x40, 0x4(A6,D0.w)
+	bra.w _lab_5E5A
+_lab_5E54:
+	move.w #0x41, 0x4(A6,D0.w)
+_lab_5E5A:
+	rts
+
+_lab_5E5C:
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_5EE4
+	cmpi.w #0, 0x10(A6,D0.w)
+	beq.w _lab_5EE4
+	lea (_lab_5EE6).l, A2
+	move.w 0x10(A6,D0.w), D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.b 0x15(A6,D0.w), D1
+	ext.w D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w 0xE(A6,D0.w), D1
+	mulu.w #2, D1
+	cmpi.w #0xFFFF, (A2,D1.w)
+	bne.w _lab_5EAA
+	bra.w _lab_5EE4
+_lab_5EAA:
+	cmpi.w #0x8888, (A2,D1.w)
+	bne.w _lab_5EBE
+	move.w #0, 0xE(A6,D0.w)
+	move.w #0, D1
+_lab_5EBE:
+	move.w (A2,D1.w), 0x4(A6,D0.w)
+	addq.w #1, 0xE(A6,D0.w)
+	cmpi.b #1, 0x14(A6,D0.w)
+	beq.w _lab_5EE4
+	cmpi.w #4, CURR_LEVEL
+	beq.w _lab_5EE4
+	addi.w #0x14, 0x4(A6,D0.w)
+_lab_5EE4:
+	rts
+
+_lab_5EE6:
+	.long _lab_5F06
+	.long _lab_5F06
+	.long _lab_5F1E
+	.long _lab_5F48
+	.long _lab_5F72
+	.long _lab_5F96
+	.long _lab_5FB0
+	.long _lab_5FD2
+
+_lab_5F06:
+	.long _lab_5F14
+	.long _lab_5F14
+	.long _lab_5F1A
+
+_lab_5F12:
+	.word 0xFFFF
+
+_lab_5F14:
+	.word 0x5B
+	.word 0x5C
+	.word 0x8888
+
+_lab_5F1A:
+	.word 0x5D
+	.word 0x8888
+
+_lab_5F1E:
+	.long _lab_5F32
+	.long _lab_5F32
+	.long _lab_5F3C
+	.long _lab_5F40
+	.long _lab_5F40
+
+_lab_5F32:
+	.word 0x54
+	.word 0x54
+	.word 0x55
+	.word 0x55
+	.word 0x8888
+
+_lab_5F3C:
+	.word 0x56
+	.word 0x8888
+
+_lab_5F40:
+	.word 0x56
+	.word 0x57
+	.word 0x58
+	.word 0x8888
+
+_lab_5F48:
+	.long _lab_5F5C
+	.long _lab_5F5C
+	.long _lab_5F66
+	.long _lab_5F6A
+	.long _lab_5F6A
+
+_lab_5F5C:
+	.word 0x4D
+	.word 0x4E
+	.word 0x4D
+	.word 0x4E
+	.word 0x8888
+
+_lab_5F66:
+	.word 0x4F
+	.word 0x8888
+
+_lab_5F6A:
+	.word 0x4F
+	.word 0x50
+	.word 0x51
+	.word 0x8888
+
+_lab_5F72:
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+	.long _lab_5F12
+
+_lab_5F96:
+	.long _lab_5FA2
+	.long _lab_5FA2
+	.long _lab_5FAC
+
+_lab_5FA2:
+	.word 0x52
+	.word 0x53
+	.word 0x52
+	.word 0x53
+	.word 0x8888
+
+_lab_5FAC:
+	.word 0x004D
+	.word 0x8888
+
+_lab_5FB0:
+	.long _lab_5FBC
+	.long _lab_5FBC
+	.long _lab_5FCE
+
+_lab_5FBC:
+	.word 0x59
+	.word 0x59
+	.word 0x5A
+	.word 0x5A
+	.word 0x59
+	.word 0x59
+	.word 0x5A
+	.word 0x5A
+	.word 0x8888
+
+_lab_5FCE:
+	.word 0x56
+	.word 0x8888
+
+_lab_5FD2:
+	.long _lab_5FE6
+	.long _lab_5FE6
+	.long _lab_5FF0
+	.long _lab_5FE6
+	.long _lab_5FE6
+
+_lab_5FE6:
+	.word 0x7E
+	.word 0x7E
+	.word 0x7F
+	.word 0x7F
+	.word 0x8888
+
+_lab_5FF0:
+	.word 0x81
+	.word 0x82
+	.word 0x8888
+
+_lab_5FF6:
+	movem.l D2, -(A7)
+	cmpi.w #0, 0x10(A6,D0.w)
+	beq.w _lab_6028
+	lea (_lab_602E).l, A2
+	move.w 0x10(A6,D0.w), D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	jsr (A2)
+	cmpi.w #7, 0x10(A6,D0.w)
+	bge.w _lab_6028
+	jsr (_lab_5E5C).l
+_lab_6028:
+	movem.l (A7)+, D2
+	rts
+
+_lab_602E:
+	.long _lab_7208
+	.long _lab_7208
+	.long _lab_7386
+	.long _lab_7530
+	.long _lab_7640
+	.long _lab_7770
+	.long _lab_77F4
+	.long _lab_6F66
+	.long _lab_6E44
+	.long _lab_6DF4
+	.long _lab_6D66
+	.long _lab_6CCE
+	.long _lab_6A5C
+	.long _lab_677A
+	.long _lab_6642
+	.long _lab_645C
+	.long _lab_62BC
+	.long _lab_6076
+
+_lab_6076:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6106
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	lea (_lab_71C8).l, A2
+	move.b (A2,D1.w), D2
+	ext.w D2
+	add.w D2, (A6,D0.w)
+	move.b 0x1(A2,D1.w), D2
+	ext.w D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x10, 0x17(A6,D0.w)
+	bne.w _lab_60EC
+	move.w D0, D1
+	addi.w #0x20, D1
+	move.w (A6,D0.w), (A6,D1.w)
+	subi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	addi.w #0x10, 0x2(A6,D1.w)
+	move.w #0x83, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+	move.w #4, 0x10(A6,D1.w)
+	move.w #0x80, 0x4(A6,D0.w)
+	bra.w _lab_62BA
+_lab_60EC:
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x17(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_62BA
+_lab_6106:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6156
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_62BA
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x17(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	addq.b #1, 0x1A(A6,D0.w)
+	cmpi.b #3, 0x1A(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x1A(A6,D0.w)
+	move.b #3, 0x15(A6,D0.w)
+	bra.w _lab_62BA
+_lab_6156:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_61DA
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_62BA
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	bgt.w _lab_619E
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	blt.w _lab_62BA
+_lab_619E:
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	move.w #0, SCROLL_LOCK
+	move.w #1, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0, 0xFF714E
+	move.b #0, 0xFF7156
+	bra.w _lab_62BA
+_lab_61DA:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_626A
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	lea (_lab_71C8).l, A2
+	move.b (A2,D1.w), D2
+	ext.w D2
+	sub.w D2, (A6,D0.w)
+	move.b 0x1(A2,D1.w), D2
+	ext.w D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x10, 0x17(A6,D0.w)
+	bne.w _lab_6250
+	move.w D0, D1
+	addi.w #0x20, D1
+	move.w (A6,D0.w), (A6,D1.w)
+	subi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	addi.w #0x10, 0x2(A6,D1.w)
+	move.w #0x83, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+	move.w #4, 0x10(A6,D1.w)
+	move.w #0x80, 0x4(A6,D0.w)
+	bra.w _lab_62BA
+_lab_6250:
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x17(A6,D0.w)
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_62BA
+_lab_626A:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_62BA
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_62BA
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x17(A6,D0.w)
+	move.b #3, 0x15(A6,D0.w)
+	addq.b #1, 0x1A(A6,D0.w)
+	cmpi.b #3, 0x1A(A6,D0.w)
+	blt.w _lab_62BA
+	move.b #0, 0x1A(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_62BA
+_lab_62BA:
+	rts
+
+_lab_62BC:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_62F8
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xC(A6,D0.w), ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #1, 0x16(A6,D0.w)
+	beq.w _lab_62EE
+	addq.w #2, 0x2(A6,D0.w)
+	bra.w _lab_645A
+_lab_62EE:
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_645A
+_lab_62F8:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_635E
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_632A
+	cmpi.w #0x8F, 0x4(A6,D0.w)
+	beq.w _lab_6324
+	move.w #0x8F, 0x4(A6,D0.w)
+	bra.w _lab_632A
+_lab_6324:
+	move.w #0x90, 0x4(A6,D0.w)
+_lab_632A:
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_642E
+	move.b #3, 0x15(A6,D0.w)
+	bra.w _lab_642E
+_lab_635E:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_63B4
+	cmpi.b #1, 0x1C(A6,D0.w)
+	beq.w _lab_6382
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x1C(A6,D0.w)
+	bra.w _lab_645A
+_lab_6382:
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w d1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_645A
+_lab_63B4:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_645A
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_63E6
+	cmpi.w #0xB7, 0x4(A6,D0.w)
+	beq.w _lab_63E0
+	move.w #0xB7, 0x4(A6,D0.w)
+	bra.w _lab_63E6
+_lab_63E0:
+	move.w #0xB8, 0x4(A6,D0.w)
+_lab_63E6:
+	addq.w #1, (A6,D0.w)
+	cmpi.w #0x180, (A6,D0.w)
+	blt.w _lab_63FE
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_642E
+_lab_63FE:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_642E
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_642E
+_lab_642E:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xC(A6,D0.w), ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #1, 0x16(A6,D0.w)
+	beq.w _lab_6452
+	addq.w #2, 0x2(A6,D0.w)
+_lab_6452:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+_lab_645A:
+	rts
+
+_lab_645C:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_652C
+	clr.l D1
+	lea (_lab_65B0).l, A2
+	move.b 0x16(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D1
+	cmpi.w #0x8888, D1
+	bne.w _lab_648E
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_65AE
+_lab_648E:
+	addq.b #1, 0x16(A6,D0.w)
+	cmpi.b #0, 0x14(A6,D0.w)
+	bne.w _lab_64C0
+	add.w ENTITY_DRIFT, D1
+	add.w D1, (A6,D0.w)
+	cmpi.w #0x168, (A6,D0.w)
+	blt.w _lab_6512
+	move.b #1, 0x14(A6,D0.w)
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_65AE
+_lab_64C0:
+	sub.w D1, (A6,D0.w)
+	cmpi.w #0x80, (A6,D0.w)
+	bgt.w _lab_6512
+	cmpi.w #0xE, CURR_LEVEL ; 4-1
+	beq.w _lab_64EA
+	cmpi.w #0x16, CURR_LEVEL ; 6-1
+	beq.w _lab_64F6
+	bra.w _lab_6502
+_lab_64EA:
+	cmpi.w #0xE, SCREENS_CROSSED
+	bge.w _lab_65AE
+_lab_64F6:
+	cmpi.w #0xA, SCREENS_CROSSED
+	bge.w _lab_65AE
+_lab_6502:
+	move.b #0, 0x14(A6,D0.w)
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_65AE
+_lab_6512:
+	move.l vdp_counter, D1
+	andi.l #0xFF, D1
+	bne.w _lab_65AE
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_65AE
+_lab_652C:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6572
+	move.w D0, D1
+	jsr (_lab_47D4).l
+	move.w (A6,D0.w), (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x8E, 0x4(A6,D1.w)
+	move.w #4, 0x8(A6,D1.w)
+	move.w #2, 0xA(A6,D1.w)
+	move.w #2, 0xC(A6,D1.w)
+	move.w #0x10, 0x10(A6,D1.w)
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_65AE
+_lab_6572:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_65AE
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_65AE
+_lab_65AE:
+	rts
+
+_lab_65B0:
+	.word 0,0
+	.word 1,1,1,1,1,1,1,1
+	.word 2,2,2,2,2,2,2,2,2,2
+	.word 3,3,3,3,3,3,3
+	.word 4,4,4,4,4,4,4,4,4,4
+	.word 3,3,3,3,3,3,3,3
+	.word 2,2,2,2,2,2,2,2,2,2,2,2,2
+	.word 1,1,1,1,1,1,1,1,1,1,1
+	.word 0,0,0
+	.word 0x8888
+
+_lab_6642:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_66A8
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_6674
+	cmpi.w #0x95, 0x4(A6,D0.w)
+	beq.w _lab_666E
+	move.w #0x95, 0x4(A6,D0.w)
+	bra.w _lab_6674
+_lab_666E:
+	move.w #0x97, 0x4(A6,D0.w)
+_lab_6674:
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_66A8:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6722
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_66DA
+	cmpi.w #0xB5, 0x4(A6,D0.w)
+	beq.w _lab_66D4
+	move.w #0xB5, 0x4(A6,D0.w)
+	bra.w _lab_66DA
+_lab_66D4:
+	move.w #0xB6, 0x4(A6,D0.w)
+_lab_66DA:
+	addq.w #1, (A6,D0.w)
+	cmpi.w #0x180, (A6,D0.w)
+	blt.w _lab_66F2
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_66F2:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_6722:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6778
+	cmpi.b #1, 0x1C(A6,D0.w)
+	bne.w _lab_6746
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x1C(A6,D0.w)
+	bra.w _lab_6778
+_lab_6746:
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6778
+_lab_6778:
+	rts
+
+_lab_677A:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6838
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_72DE
+	cmpi.b #0, 0x14(A6,D0.w)
+	beq.w _lab_67EA
+	addq.w #1, (A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x28, 0x17(A6,D0.w)
+	blt.w _lab_67BE
+	move.b #0, 0x17(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_67BE:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_72DE
+	cmpi.w #0xA8, 0x4(A6,D0.w)
+	bne.w _lab_67E0
+	move.w #0xA9, 0x4(A6,D0.w)
+	bra.w _lab_72DE
+_lab_67E0:
+	move.w #0xA8, 0x4(A6,D0.w)
+	bra.w _lab_72DE
+_lab_67EA:
+	subq.w #1, (A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x28, 0x17(A6,D0.w)
+	blt.w _lab_680C
+	move.b #0, 0x17(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_680C:
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_72DE
+	cmpi.w #0x9A, 0x4(A6,D0.w)
+	bne.w _lab_682E
+	move.w #0x9B, 0x4(A6,D0.w)
+	bra.w _lab_72DE
+_lab_682E:
+	move.w #0x9A, 0x4(A6,D0.w)
+	bra.w _lab_72DE
+_lab_6838:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_68BE
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_6974
+	move.w #0x16, D2
+_lab_6854:
+	move.w D2, D1
+	mulu.w #0x20, D1
+	cmpi.w #0, 0x4(A6,D1.w)
+	bne.w _lab_68B2
+	move.w (A6,D0.w), (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x9D, 0x4(A6,D1.w)
+	move.w #4, 0x8(A6,D1.w)
+	move.w #0xD, 0x10(A6,D1.w)
+	move.b #3, 0x15(A6,D1.w)
+	move.b #0, 0x15(A6,D0.w)
+	move.b 0x14(A6,D0.w), 0x14(A6,D1.w)
+	cmpi.b #0, 0x14(A6,D0.w)
+	beq.w _lab_68A8
+	move.b #0, 0x14(A6,D0.w)
+	bra.w _lab_6974
+_lab_68A8:
+	move.b #1, 0x14(A6,D0.w)
+	bra.w _lab_6974
+_lab_68B2:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	blt.b _lab_6854
+	bra.w _lab_6974
+_lab_68BE:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_68FA
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6974
+_lab_68FA:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_6974
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_6926
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0xA0, 0x4(A6,D0.w)
+	ble.w _lab_6926
+	move.w #0x9D, 0x4(A6,D0.w)
+_lab_6926:
+	lea (_lab_6976).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), D2
+	cmpi.w #0x8888, D2
+	bne.w _lab_694E
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6974
+_lab_694E:
+	cmpi.b #0, 0x14(A6,D0.w)
+	beq.w _lab_6960
+	sub.w D2, (A6,D0.w)
+	bra.w _lab_6964
+_lab_6960:
+	add.w D2, (A6,D0.w)
+_lab_6964:
+	move.w 0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	bra.w _lab_6974
+_lab_6974:
+	rts
+
+_lab_6976:
+	.word 2,-5
+	.word 2,-5
+	.word 2,-4
+	.word 2,-4
+	.word 2,-4
+	.word 2,-2
+	.word 2,-2
+	.word 2,-3
+	.word 2,-3
+	.word 1,-3
+	.word 1,-3
+	.word 1,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-1
+	.word 2,-1
+	.word 2,-1
+	.word 2,-1
+	.word 1,-1
+	.word 0,0
+	.word 0,0
+	.word 3,1
+	.word 3,1
+	.word 3,1
+	.word 3,2
+	.word 3,2
+	.word 3,2
+	.word 3,2
+	.word 3,2
+	.word 3,3
+	.word 3,3
+	.word 2,3
+	.word 2,3
+	.word 2,3
+	.word 2,4
+	.word 2,4
+	.word 1,4
+	.word 1,4
+	.word 1,5
+	.word 1,5
+	.word 1,5
+	.word 1,6
+	.word 1,6
+	.word 1,6
+	.word 1,6
+	.word 1,7
+	.word 1,7
+	.word 1,7
+	.word 1,8
+	.word 1,8
+	.word 1,8
+	.word 1,8
+	.word 1,8
+	.word 1,8
+	.word 0x8888
+
+_lab_6A5C:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6A7A
+	cmpi.w #0xD0, (A6,D0.w)
+	bgt.w _lab_6B32
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_6B32
+_lab_6A7A:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6AE8
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_6AAC
+	cmpi.w #0xA4, 0x4(A6,D0.w)
+	beq.w _lab_6AA6
+	move.w #0xA4, 0x4(A6,D0.w)
+	bra.w _lab_6AAC
+_lab_6AA6:
+	move.w #0xA5, 0x4(A6,D0.w)
+_lab_6AAC:
+	lea (_lab_6B34).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), D2
+	cmpi.w #0x8888, D2
+	bne.w _lab_6AD4
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6B32
+_lab_6AD4:
+	add.w D2, (A6,D0.w)
+	move.w 0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	bra.w _lab_6B32
+_lab_6AE8:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6B24
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6B32
+_lab_6B24:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_6B32
+	bra.w _lab_6B32
+_lab_6B32:
+	rts
+
+_lab_6B34:
+	.word 2,-6
+	.word 2,-6
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-4
+	.word 2,-4
+	.word 1,-4
+	.word 1,-4
+	.word 1,-3
+	.word 2,-6
+	.word 2,-6
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-5
+	.word 2,-4
+	.word 2,-4
+	.word 1,-4
+	.word 1,-4
+	.word 1,-3
+	.word 2,-4
+	.word 2,-4
+	.word 2,-4
+	.word 2,-4
+	.word 2,-4
+	.word 2,-3
+	.word 2,-3
+	.word 2,-3
+	.word 2,-3
+	.word 1,-3
+	.word 1,-3
+	.word 1,-2
+	.word 2,-3
+	.word 2,-3
+	.word 2,-3
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-2
+	.word 2,-1
+	.word 1,-1
+	.word 1,-1
+	.word 1,-1
+	.word 1,-1
+	.word 2,0
+	.word 2,0
+	.word 2,1
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,2
+	.word 2,3
+	.word 2,3
+	.word 2,3
+	.word 3,2
+	.word 3,2
+	.word 3,4
+	.word 3,1
+	.word 3,2
+	.word 3,2
+	.word 3,3
+	.word 3,3
+	.word 3,3
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 3,4
+	.word 4,4
+	.word 4,4
+	.word 4,4
+	.word 4,4
+	.word 4,4
+	.word 4,5
+	.word 4,6
+	.word 2,6
+	.word 2,6
+	.word 2,7
+	.word 2,7
+	.word 2,7
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 2,8
+	.word 0x8888
+
+_lab_6CCE:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6D16
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_6D5C
+	subq.w #1, (A6,D0.w)
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_6D5C
+	cmpi.w #0x93, 0x4(A6,D0.w)
+	beq.w _lab_6D0C
+	move.w #0x93, 0x4(A6,D0.w)
+	bra.w _lab_6D5C
+_lab_6D0C:
+	move.w #0x94, 0x4(A6,D0.w)
+	bra.w _lab_6D5C
+_lab_6D16:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6D24
+	bra.w _lab_6D5C
+_lab_6D24:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6D5C
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+_lab_6D5C:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+	rts
+
+_lab_6D66:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6DA0
+	subq.w #1, (A6,D0.w)
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_6DEA
+	cmpi.w #0x91, 0x4(A6,D0.w)
+	beq.w _lab_6D96
+	move.w #0x91, 0x4(A6,D0.w)
+	bra.w _lab_6DEA
+_lab_6D96:
+	move.w #0x92, 0x4(A6,D0.w)
+	bra.w _lab_6DEA
+_lab_6DA0:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6DAE
+	bra.w _lab_6DEA
+_lab_6DAE:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6DEA
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6DEA
+_lab_6DEA:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+	rts
+
+_lab_6DF4:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6E02
+	bra.w _lab_6E3A
+_lab_6E02:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6E10
+	bra.w _lab_6E3A
+_lab_6E10:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6E1E
+	bra.w _lab_6E3A
+_lab_6E1E:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_6E2C
+	bra.w _lab_6E3A
+_lab_6E2C:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_6E3A
+	bra.w _lab_6E3A
+_lab_6E3A:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+	rts
+
+_lab_6E44:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6E7E
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_6F5C
+	addq.w #1, 0x2(A6,D0.w)
+	move.w 0x2(A6,D0.w), D2
+	cmp.w PLR_POS_Y, D2
+	blt.w _lab_6F5C
+	move.b #1, 0x15(A6,D0.w)
+	move.w #0x8D, 0x4(A6,D0.w)
+	bra.w _lab_6F5C
+_lab_6E7E:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_6EC0
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #7, 0x17(A6,D0.w)
+	blt.w _lab_6F5C
+	move.w #0x8C, 0x4(A6,D0.w)
+	move.b #3, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	move.w (A6,D0.w), D2
+	cmp.w PLR_POS_X, D2
+	blt.w _lab_6F5C
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_6F5C
+_lab_6EC0:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_6EFC
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_6F5C
+_lab_6EFC:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_6F2C
+	addq.w #1, (A6,D0.w)
+	subq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_6F5C
+	move.b #0, 0x17(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_6F5C
+_lab_6F2C:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_6F5C
+	subq.w #1, (A6,D0.w)
+	subq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_6F5C
+	move.b #0, 0x17(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_6F5C
+_lab_6F5C:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+	rts
+	
+_lab_6F66:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_6FF6
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	lea (_lab_71C8).l, A2
+	move.b (A2,D1.w), D2
+	ext.w D2
+	add.w D2, (A6,D0.w)
+	move.b 0x1(A2,D1.w), D2
+	ext.w D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x10, 0x17(A6,D0.w)
+	bne.w _lab_6FDC
+	move.w D0, D1
+	addi.w #0x20, D1
+	move.w (A6,D0.w), (A6,D1.w)
+	subi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	addi.w #0x10, 0x2(A6,D1.w)
+	move.w #0x83, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+	move.w #4, 0x10(A6,D1.w)
+	move.w #0x80, 0x4(A6,D0.w)
+	bra.w _lab_71C6
+_lab_6FDC:
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x17(A6,D0.w)
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_71C6
+_lab_6FF6:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_7046
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_71C6
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x17(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	addq.b #1, 0x1A(A6,D0.w)
+	cmpi.b #3, 0x1A(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x1A(A6,D0.w)
+	move.b #3, 0x15(A6,D0.w)
+	bra.w _lab_71C6
+_lab_7046:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_70E6
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_71C6
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	bgt.w _lab_708E
+	addq.b #1, 0x17(A6,D0.w)
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	blt.w _lab_71C6
+_lab_708E:
+	move.w #1, FIGHT_STAGE
+	move.w #0, SCROLL_LOCK
+	cmpi.w #0x130, PLR_POS_Y
+	blt.w _lab_71C6
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	move.w #2, FIGHT_STAGE
+	move.w #1, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0, 0xFF714E
+	move.b #0, 0xFF7156
+	bra.w _lab_71C6
+_lab_70E6:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_7176
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	lea (_lab_71C8).l, A2
+	move.b (A2,D1.w), D2
+	ext.w D2
+	sub.w D2, (A6,D0.w)
+	move.b 0x1(A2,D1.w), D2
+	ext.w D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x10, 0x17(A6,D0.w)
+	bne.w _lab_715C
+	move.w D0, D1
+	addi.w #0x20, D1
+	move.w (A6,D0.w), (A6,D1.w)
+	subi.w #0x18, (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	addi.w #0x10, 0x2(A6,D1.w)
+	move.w #0x83, 0x4(A6,D1.w)
+	move.w #5, 0x8(A6,D1.w)
+	move.w #4, 0x10(A6,D1.w)
+	move.w #0x80, 0x4(A6,D0.w)
+	bra.w _lab_71C6
+_lab_715C:
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x17(A6,D0.w)
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_71C6
+_lab_7176:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_71C6
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_71C6
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x14, 0x17(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x17(A6,D0.w)
+	move.b #3, 0x15(A6,D0.w)
+	addq.b #1, 0x1A(A6,D0.w)
+	cmpi.b #3, 0x1A(A6,D0.w)
+	blt.w _lab_71C6
+	move.b #0, 0x1A(A6,D0.w)
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_71C6
+_lab_71C6:
+	rts
+
+_lab_71C8:
+	.byte 0,-1
+	.byte -1,-3
+	.byte -1,-3
+	.byte -2,-3
+	.byte -1,-2
+	.byte -2,-2
+	.byte -2,-2
+	.byte -2,-1
+	.byte -2,-1
+	.byte -1,-1
+	.byte -1,0
+	.byte -1,0
+	.byte -1,-1
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,1
+	.byte -1,0
+	.byte -1,2
+	.byte -1,2
+	.byte -1,2
+	.byte -1,1
+	.byte -1,2
+	.byte -1,2
+	.byte -1,2
+	.byte -1,1
+	.byte -1,1
+	.byte -1,2
+	.byte -1,2
+
+_lab_7208:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_7246
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7246:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_7298
+	addq.w #1, (A6,D0.w)
+	cmpi.w #0x180, (A6,D0.w)
+	blt.w _lab_7268
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7268:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7298:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_72DE
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #1, 0x1C(A6,D0.w)
+	bne.w _lab_72C8
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+_lab_72C8:
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_730A
+_lab_72DE:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xC(A6,D0.w), ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #1, 0x16(A6,D0.w)
+	beq.w _lab_7302
+	addq.w #8, 0x2(A6,D0.w)
+_lab_7302:
+	move.w D0, D1
+	jsr (_lab_3D9C).l
+_lab_730A:
+	rts
+
+_lab_730C:
+	.word -4,-4,-3,-3,-2,-2,-1,-1,0,0,0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+
+_lab_7386:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_73D2
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_752E
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_73D2:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_7432
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_752E
+	addq.w #1, (A6,D0.w)
+	cmpi.w #0x180, (A6,D0.w)
+	blt.w _lab_7402
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7402:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #0, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7432:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_74A8
+	cmpi.b #1, 0x1C(A6,D0.w)
+	bne.w _lab_7478
+	lea (_lab_730C).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_752E
+_lab_7478:
+	cmpi.b #1, 0x1B(A6,D0.w)
+	beq.w _lab_748C
+	cmpi.b #1, 0x1A(A6,D0.w)
+	bne.w _lab_72DE
+_lab_748C:
+	move.w 0xFF714E, D1
+	move.b D1, 0x14(A6,D0.w)
+	move.b D1, 0x15(A6,D0.w)
+	addq.b #3, 0x15(A6,D0.w)
+	move.b #1, 0x1B(A6,D0.w)
+	bra.w _lab_72DE
+_lab_74A8:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_74E6
+	addq.w #2, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_7524
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_7524
+_lab_74E6:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_752E
+	subq.w #2, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_7524
+	move.b #3, 0x15(A6,D0.w)
+	bra.w _lab_7524
+_lab_7524:
+	jsr (_lab_3C92).l
+	bra.w _lab_72DE
+_lab_752E:
+	rts
+
+_lab_7530:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_7570
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_763E
+	subq.w #1, (A6,D0.w)
+	move.b #1, 0x14(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	ble.w _lab_72DE
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7570:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_75B0
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_763E
+	addq.w #1, (A6,D0.w)
+	move.b #0, 0x14(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x50, 0x17(A6,D0.w)
+	ble.w _lab_72DE
+	move.b #0, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_72DE
+_lab_75B0:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_75C2
+	bra.w _lab_7432
+	bra.w _lab_72DE ; strange...
+_lab_75C2:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_7600
+	addq.w #2, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #0, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_7600:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_763E
+	subq.w #2, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w 0xA(A6,D0.w), ENTITY_WIDTH
+	move.b #1, 0x14(A6,D0.w)
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_72DE
+	move.b #3, 0x15(A6,D0.w)
+	bra.w _lab_72DE
+_lab_763E:
+	rts
+
+_lab_7640:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_7676
+	move.w PLR_POS_X, D1
+	addi.w #0x18, D1
+	cmp.w (A6,D0.w), D1
+	blt.w _lab_766C
+	addi.w #0x20, D1
+	cmp.w (A6,D0.w), D1
+	blt.w _lab_766C
+	bra.w _lab_7302
+_lab_766C:
+	move.b #1, 0x15(A6,D0.w)
+	bra.w _lab_7302
+_lab_7676:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_76A2
+	subq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #3, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_76A2:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_76B8
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_7302
+_lab_76B8:
+	cmpi.b #3, 0x15(A6,D0.w)
+	bne.w _lab_770C
+	move.w GLOBAL_TIMER, D1
+	andi.w #7, D1
+	bne.w _lab_7302
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x10, 0x17(A6,D0.w)
+	blt.w _lab_76EE
+	move.b #0, 0x17(A6,D0.w)
+	move.b #4, 0x15(A6,D0.w)
+	bra.w _lab_7302
+_lab_76EE:
+	cmpi.w #0x5E, 0x4(A6,D0.w)
+	beq.w _lab_7702
+	move.w #0x5E, 0x4(A6,D0.w)
+	bra.w _lab_7302
+_lab_7702:
+	move.w #0x5F, 0x4(A6,D0.w)
+	bra.w _lab_7302
+_lab_770C:
+	cmpi.b #4, 0x15(A6,D0.w)
+	bne.w _lab_7738
+	addq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x20, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #5, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_7738:
+	cmpi.b #5, 0x15(A6,D0.w)
+	bne.w _lab_7302
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_7302
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x1E, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #0, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_776E:
+	rts    ; this rts is never reached
+
+_lab_7770:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_77A2
+	move.b #1, 0x14(A6,D0.w)
+	subq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x3C, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #1, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_77A2:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_77CE
+	addq.w #1, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x3C, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #0, 0x15(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_77CE:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_7302
+	addq.w #2, 0x2(A6,D0.w)
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_77F2
+_lab_77F2:
+	rts
+
+_lab_77F4:
+	cmpi.b #0, 0x15(A6,D0.w)
+	bne.w _lab_784E
+	move.b #1, 0x14(A6,D0.w)
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_7302
+	lea (_lab_7882).l, A2
+	move.b 0x17(A6,D0.w), D1
+	ext.w D1
+	mulu.w #2, D1
+	move.b (A2,D1.w), D2
+	ext.w D2
+	add.w D2, (A6,D0.w)
+	move.b 0x1(A2,D1.w), D2
+	ext.w D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.b #1, 0x17(A6,D0.w)
+	cmpi.b #0x2F, 0x17(A6,D0.w)
+	blt.w _lab_7302
+	move.b #0, 0x17(A6,D0.w)
+	bra.w _lab_7302
+_lab_784E:
+	cmpi.b #1, 0x15(A6,D0.w)
+	bne.w _lab_785C
+	bra.w _lab_7302
+_lab_785C:
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_7302
+	addq.w #2, 0x2(A6,D0.w)
+	cmpi.w #0x170, 0x2(A6,D0.w)
+	blt.w _lab_7302
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_7880
+_lab_7880:
+	rts
+
+_lab_7882:
+	.byte 0,-1
+	.byte -1,-3
+	.byte -1,-3
+	.byte -2,-3
+	.byte -1,-2
+	.byte -2,-2
+	.byte -2,-2
+	.byte -2,-1
+	.byte -2,-1
+	.byte -1,-1
+	.byte -1,0
+	.byte -1,0
+	.byte -1,-1
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,0
+	.byte -1,1
+	.byte -1,0
+	.byte -1,0
+	.byte -1,1
+	.byte -1,0
+	.byte -2,1
+	.byte -2,2
+	.byte -2,2
+	.byte -2,2
+	.byte -1,2
+	.byte -1,3
+	.byte -1,3
+	.byte -1,3
+	.byte -1,3
+	.byte -2,4
+	.byte -2,4
+	.byte -3,4
+	.byte -5,4
+	.byte -5,2
+	.byte -4,0
+	.byte -4,-1
+	.byte -4,-2
+	.byte -4,-3
+	.byte -1,-1
+	.byte -2,-3
+	.byte -2,-3
+	.byte -1,-3
+	.byte -1,-3
+
+_lab_78E0:
+	lea (stage_entities).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w ENTITY_INDEX, D1
+	mulu.w #0xE, D1
+	cmpi.w #0xFFFF, (A2,D1.w)
+	beq.w _lab_7A5C
+	move.w SCREENS_CROSSED, D2
+	mulu.w #0x100, D2
+	add.w SCROLL_OFFSET, D2
+	addi.w #0x100, D2
+	cmp.w (A2,D1.w), D2
+	blt.w _lab_7A5C
+	move.w #0x16, D3
+_lab_7928:
+	move.w D3, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	bne.w _lab_7A48
+	cmpi.w #2, CURR_LEVEL ; 1-1 bonus
+	beq.w _lab_7954
+	cmpi.w #5, CURR_LEVEL ; 1-2 bonus
+	beq.w _lab_7954
+	bra.w _lab_7960
+_lab_7954:
+	move.w (A2,D1.w), D2
+	addi.w #0x80, D2
+	bra.w _lab_7968
+_lab_7960:
+	sub.w (A2,D1.w), D2
+	addi.w #0x180, D2
+_lab_7968:
+	move.w D2, (A6,D0.w)
+	move.w 0x2(A2,D1.w), 0x2(A6,D0.w)
+	move.w 0x4(A2,D1.w), 0x4(A6,D0.w)
+	move.w 0x6(A2,D1.w), 0x8(A6,D0.w)
+	move.w 0x8(A2,D1.w), 0x10(A6,D0.w)
+	move.w 0xA(A2,D1.w), 0xA(A6,D0.w)
+	move.w 0xC(A2,D1.w), 0xC(A6,D0.w)
+	move.w 0.w, 0xE(A6,D0.w) ; huh... what??
+	cmpi.w #0x25, CURR_LEVEL ; 8-4 final room
+	bne.w _lab_79C6
+	cmpi.w #1, 0x8(A6,D0.w)
+	bne.w _lab_79C6
+	lea (_lab_7A9E).l, A3
+	move.l #0xC0600000, (A1)
+	move.w #0xF, D5
+_lab_79BC:
+	move.w (A3)+, (A0)
+	dbf D5, _lab_79BC
+	bra.w _lab_7A56
+_lab_79C6:
+	cmpi.w #0, SPRITE_PALETTE
+	beq.w _lab_7A08
+	cmpi.w #0xD, 0x10(A6,D0.w)
+	bge.w _lab_7A56
+	cmpi.w #4, 0x8(A6,D0.w)
+	bne.w _lab_7A56
+	move.w #0, SPRITE_PALETTE
+	lea (_lab_7A5E).l, A3
+	move.l #0xC0600000, (A1)
+	move.w #0xF, D5
+_lab_79FE:
+	move.w (A3)+, (A0)
+	dbf D5, _lab_79FE
+	bra.w _lab_7A56
+_lab_7A08:
+	cmpi.w #0xD, 0x10(A6,D0.w)
+	blt.w _lab_7A56
+	cmpi.w #0x11, 0x10(A6,D0.w)
+	beq.w _lab_7A56
+	cmpi.w #0x4, 0x8(A6,D0.w)
+	bne.w _lab_7A56
+	move.w #1, SPRITE_PALETTE
+	lea (_lab_7A7E).l, A3
+	move.l #0xC0600000, (A1)
+	move.w #0xF, D5
+_lab_7A3E:
+	move.w (A3)+, (A0)
+	dbf D5, _lab_7A3E
+	bra.w _lab_7A56
+_lab_7A48:
+	addq.w #1, D3
+	cmpi.w #0x33, D3
+	ble.w _lab_7928
+	bra.w _lab_7A5C
+_lab_7A56:
+	addq.w #1, ENTITY_INDEX
+_lab_7A5C:
+	rts
+
+_lab_7A5E:
+	.word 0x0000,0x0EEE,0x0222,0x086E,0x020E,0x002A,0x0482,0x04A4
+	.word 0x08C6,0x004A,0x00CE,0x008E,0x04AE,0x048C,0x0048,0x0026
+
+_lab_7A7E:
+	.word 0x0000,0x0EEE,0x0222,0x0444,0x0666,0x0AAA,0x064C,0x086E
+	.word 0x0AAE,0x0082,0x00A4,0x02C6,0x048E,0x004A,0x002A,0x020E
+
+_lab_7A9E:
+	.word 0x0000,0x020C,0x042E,0x0A8E,0x0CAE,0x0440,0x0662,0x04EE
+	.word 0x02AC,0x00BF,0x0246,0x06AE,0x004C,0x066C,0x0222,0x0EEE
+
+stage_entities:
+	.long entities_11
+	.long entities_12
+	.long entities_11bonus
+	.long entities_13
+	.long entities_14
+	.long entities_12bonus
+	.long entities_21
+	.long entities_22
+	.long entities_23
+	.long entities_24
+	.long entities_31
+	.long entities_32
+	.long entities_33
+	.long entities_34
+	.long entities_41
+	.long entities_42
+	.long entities_43
+	.long entities_44
+	.long entities_51
+	.long entities_52
+	.long entities_53
+	.long entities_54
+	.long entities_61
+	.long entities_62
+	.long entities_63
+	.long entities_64
+	.long entities_71
+	.long entities_72
+	.long entities_73
+	.long entities_74
+	.long entities_81
+	.long entities_82
+	.long entities_83
+	.long entities_841
+	.long entities_842
+	.long entities_843
+	.long entities_844
+	.long entities_845
+	.long entities_unused
+	.long entities_unused
+
+entities_unused:
+	.word 0xFFFF
+
+entities_11:
+	.word 0x0138,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0290,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0318,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0328,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0510,0x00B8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0528,0x00B8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x05F0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x06A0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x06C0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07A0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07C0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07E0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0800,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0C64,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_12:
+	.word 0x0070,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01C8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0258,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0270,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x02A0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02A0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02B8,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02B8,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02D0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02D0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0350,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0380,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0398,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x03A0,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03B0,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03C0,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0470,0x00B8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0478,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0478,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0488,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0488,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0498,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0498,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04A8,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04A8,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04B8,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04B8,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04C8,0x00B8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04E8,0x00B8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0540,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0550,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0560,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0570,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0580,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0590,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05A0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x05C0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x05E0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0678,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x06D8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0738,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x08C0,0x00B8,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x08C0,0x0140,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0970,0x0118,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x09A8,0x00F8,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0xFFFF
+
+entities_11bonus:
+	.word 0x0048,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0058,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0068,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0078,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0088,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0038,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0048,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0058,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0068,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0078,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0088,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0098,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0038,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0048,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0058,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0068,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0078,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0088,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0098,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0xFFFF
+
+entities_13:
+	.word 0x0190,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01A0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01B0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01B0,0x00A8,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x01F0,0x0118,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0230,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0240,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0280,0x00A0,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0298,0x00A0,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0308,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0308,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0350,0x0128,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x03A0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03B0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03C0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03D0,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0478,0x00E8,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x04B0,0x00C0,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0520,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0530,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0540,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0550,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0560,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0570,0x0090,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0578,0x00E0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0690,0x00C8,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x06B8,0x00E8,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x06C0,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D0,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06E0,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0730,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0740,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x07A8,0x00D0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x07F8,0x0128,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x091C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_14:
+	.word 0x01E6,0x0124,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0316,0x00E4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x03C6,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0436,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x04C6,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0546,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0586,0x00C4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0668,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x07BA,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x07E0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0800,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0830,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x08C0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_12bonus:
+	.word 0x0048,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0058,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0068,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0078,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0088,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0098,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x00A8,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x00B8,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0038,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0048,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0058,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0068,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0078,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0088,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0098,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x00A8,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x00B8,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0xFFFF
+
+entities_21:
+	.word 0x0168,0x0100,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01A0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x01C0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0268,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0290,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x02E8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0340,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0360,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0378,0x00F8,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x03E0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0440,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0458,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0470,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04F8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0518,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0640,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0678,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x06F0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0738,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0778,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07A8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x07E8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0828,0x0108,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0958,0x0120,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A00,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0A20,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0A60,0x011A,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0AC0,0x011A,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0B08,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B68,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0BC8,0x0138,0x00A1,0x0001,0x0006,0x0002,0x0003
+	.word 0x0C8C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_22:
+	.word 0x00F0,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0110,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0158,0x0118,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x01B0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01D0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01F0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0238,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0250,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0268,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02D0,0x0130,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0360,0x00F8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0438,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0450,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0468,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0470,0x0090,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x04A8,0x0128,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x04C0,0x0110,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0538,0x0090,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0540,0x0108,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0588,0x0090,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x05C0,0x00C0,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0618,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0638,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0658,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0660,0x0090,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0680,0x00F8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x06E0,0x0118,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0700,0x0118,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0798,0x0118,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0820,0x00D8,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0830,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0848,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0860,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0878,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0890,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0898,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x08E8,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0908,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0928,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0930,0x0090,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x09C8,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09C8,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09E8,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09E8,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A08,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A08,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A28,0x00A8,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0A48,0x00A8,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0A50,0x0120,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0xFFFF
+
+entities_23:
+	.word 0x0140,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0160,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0180,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0230,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0250,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0260,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0280,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02A0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02C0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0340,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0360,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0360,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0378,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0390,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03A8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03C0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0478,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0490,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04B0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04D0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04F0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0518,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x05C8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0620,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0638,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0650,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0668,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x06B0,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x06C8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06E0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06F8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0710,0x0162,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0790,0x0162,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x07B0,0x0162,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0820,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0840,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0860,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0870,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0870,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0890,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0890,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08B0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08B0,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0960,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x090C,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0978,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0990,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09A8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09C0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A50,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AD0,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AF0,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AF0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AF0,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B10,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B10,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B30,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B30,0x00E8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0BB0,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0E34,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_24:
+	.word 0x0108,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x01E0,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0316,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0376,0x00D4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x03D6,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0496,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0526,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0558,0x00C0,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0558,0x0140,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0588,0x00E0,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x0588,0x0170,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x05C6,0x0124,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0660,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0660,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0680,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0680,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06A0,0x0118,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06A0,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06B0,0x00E0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0708,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0800,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x08C0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_31:
+	.word 0x0168,0x0118,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0188,0x0118,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0208,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0228,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0268,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0320,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0340,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0360,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x03E8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x05C8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x05E8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0620,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0678,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0720,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0748,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x07E4,0x0130,0x00A1,0x0001,0x0006,0x0002,0x0003
+	.word 0x0880,0x0080,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x08A0,0x0080,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0904,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0938,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0970,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0990,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x09E8,0x0118,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A08,0x0118,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A60,0x00C8,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A88,0x0118,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0C6C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_32:
+	.word 0x00D8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0178,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0198,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01B8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01F0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0210,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0230,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0288,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x02A8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0368,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0388,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03A8,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0400,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0458,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0478,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0498,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04C8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0598,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x06B0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0760,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0780,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07A0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0840,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x08D0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x08F0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0910,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0970,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0990,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A00,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A20,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A40,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A80,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A98,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0AA0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AC0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AF0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0B50,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0B70,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0BB8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0BD8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0BF8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0D1C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_33:
+	.word 0x0170,0x00E8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01E0,0x00C0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x01F0,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x020C,0x0100,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0210,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02A0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02C0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02E0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0330,0x00D8,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0340,0x0118,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0358,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0378,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0398,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0380,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03A0,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03C0,0x00E0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0420,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0468,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0488,0x0138,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x04A0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04E0,0x00B0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0520,0x00E0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0520,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0588,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0590,0x0100,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x05B8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05DC,0x0110,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x062C,0x00D0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0690,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06B0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D0,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0720,0x00F0,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x07A8,0x0108,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x07D8,0x0108,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0830,0x00E0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0844,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0880,0x00F8,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0934,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_34:
+	.word 0x0100,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0134,0x0134,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0184,0x0134,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x01B0,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x01D4,0x0134,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0366,0x00D4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0366,0x0134,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0404,0x00D4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0404,0x0134,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0504,0x00D4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0504,0x0134,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0528,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0548,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0568,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0610,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0678,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x07BA,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x07E0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0800,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0830,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x08C0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_41:
+	.word 0x0158,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0180,0x00B0,0x008A,0x0004,0x000F,0x0002,0x0002
+	.word 0x0290,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02B0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02D0,0x0109,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02F0,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05E8,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0608,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0628,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0648,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0690,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06B0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06F0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0748,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0778,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0798,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x07B8,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x07D8,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0848,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0870,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0890,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08B0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08D0,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A38,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0E1C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_42:
+	.word 0x01B0,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01C0,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01D0,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0258,0x0100,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0278,0x0100,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0298,0x0100,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x03B8,0x0110,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0488,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x04B0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x04E8,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0518,0x0138,0x0000,0x0004,0x0000,0x0002,0x0003
+	.word 0x0548,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0568,0x0138,0x0000,0x0004,0x0000,0x0002,0x0003
+	.word 0x0598,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x05F0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0610,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x06B8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0728,0x00A8,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0728,0x0118,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x07C0,0x00E0,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x07C0,0x0150,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x0838,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0870,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x08A8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x08E8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0970,0x0118,0x0000,0x0004,0x0000,0x0002,0x0003
+	.word 0x09C0,0x0098,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x09C0,0x0140,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x0A20,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A30,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A40,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A50,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A60,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A70,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A78,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0A80,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A90,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AA0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AB0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B18,0x0118,0x0000,0x0004,0x0000,0x0002,0x0003
+	.word 0x0B48,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0xFFFF
+
+entities_43:
+	.word 0x0140,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0150,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0160,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0180,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0190,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01A0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01B0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01C0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0238,0x00E0,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x0238,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0248,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0258,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0268,0x0128,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0278,0x0128,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0300,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0308,0x00D8,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0378,0x00F8,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0390,0x00B0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03A8,0x00E0,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x03A8,0x0158,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x03E0,0x0108,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x0410,0x0138,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0430,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0440,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0450,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0460,0x00E0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0470,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x047C,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x048C,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x049C,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04AC,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04C0,0x00B0,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0508,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0588,0x0100,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x05B8,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x05F0,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0600,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0600,0x0100,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0668,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0680,0x00C4,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D8,0x0110,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0708,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0718,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0728,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0738,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0748,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0880,0x0110,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x093C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_44:
+	.word 0x0358,0x00E0,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x03C8,0x0118,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0730,0x00E8,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x07A8,0x0120,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0868,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x09BA,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x09E0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0A00,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0A30,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0A30,0x0120,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0AC0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_51:
+	.word 0x00E0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0118,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0138,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0158,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01B0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01D0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01F0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0248,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0268,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x02C8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0338,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x03B8,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0400,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0420,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0440,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04A0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04C0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0550,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0630,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0650,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0670,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0780,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07A0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07C0,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x07E8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0840,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0860,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0880,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x08E8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0908,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x09C8,0x00F8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0A38,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0AE0,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0B68,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0C4C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_52:
+	.word 0x0118,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0150,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0160,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0170,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01D0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01E0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01F0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0200,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x02A0,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0378,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x03D8,0x0108,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x03F8,0x0108,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04D0,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0560,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0570,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0590,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05A0,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0660,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0780,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0780,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0828,0x0140,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0848,0x0140,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0868,0x0140,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0978,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x09A8,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x09A8,0x00B8,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0A28,0x0138,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A58,0x0138,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0AB8,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AC8,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0AD8,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B68,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0C8C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_53:
+	.word 0x01B0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01C0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01D0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01E0,0x00A0,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0210,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0250,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0260,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0298,0x00A8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x02A8,0x00A8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0320,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0330,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0370,0x0128,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x03C0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03D0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03E0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03F0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0490,0x00D0,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x04E0,0x00C8,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0550,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0560,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0588,0x0100,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x05D0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05E0,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05F8,0x0110,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0610,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0620,0x00C0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06B8,0x00D8,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0708,0x00F0,0x0052,0x0004,0x0005,0x0002,0x0003
+	.word 0x0708,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0718,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0728,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0780,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0790,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0828,0x00E0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0848,0x0138,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x098C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_54:
+	.word 0x0100,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0140,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0174,0x00F4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x01E0,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x02B8,0x0154,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0374,0x00D4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0374,0x0154,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x03D4,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0498,0x0110,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0524,0x00E8,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0558,0x0090,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x0558,0x0110,0x0075,0x0001,0x0002,0x0006,0x0001
+	.word 0x0584,0x0090,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x0584,0x0110,0x0075,0x0001,0x0001,0x0006,0x0001
+	.word 0x05C8,0x0124,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0660,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0660,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0670,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0670,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0680,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0680,0x0140,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0710,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x07E0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0800,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0830,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0870,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x08C0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_61:
+	.word 0x0200,0x00A8,0x008A,0x0004,0x000F,0x0002,0x0002
+	.word 0x03E0,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x03F0,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0400,0x0110,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04C8,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04D8,0x00F0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0690,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06A0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06B0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0BAC,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_62:
+	.word 0x0138,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x01C8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0208,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0238,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0258,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x02E8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0348,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0388,0x0108,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x03E8,0x00F8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0400,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0438,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x04A8,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0508,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0548,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0578,0x00F8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x04E8,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x05E8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0668,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0698,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x06F8,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0738,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0838,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0878,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0998,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0A08,0x0138,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0A78,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0AE8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B38,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B58,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B78,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0BD8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0C98,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0CB0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0D8C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_63:
+	.word 0x01C0,0x0108,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x01C0,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01D0,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0290,0x00D8,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x02B0,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02C0,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02D0,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02E0,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02F0,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0300,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0300,0x00F0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0310,0x00C8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0340,0x00E0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x03C0,0x0110,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x0468,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0490,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04A0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04B0,0x0110,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x04E8,0x00D0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0520,0x0110,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0560,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0570,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0580,0x00A0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0640,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0650,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0660,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0670,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0788,0x00D0,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x07F0,0x00E0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0800,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0810,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0818,0x0110,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x08D0,0x00F0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0910,0x00E0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0910,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0920,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0950,0x0100,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x0990,0x00F0,0x0075,0x0001,0x0000,0x0006,0x0001
+	.word 0x09A0,0x00B0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09B0,0x00B0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0A7C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_64:
+	.word 0x0174,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x01E4,0x0124,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0210,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0254,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0318,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x03C4,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0434,0x00E4,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x04C4,0x0114,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0504,0x00C4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0544,0x0114,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0584,0x00C4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x05C4,0x0114,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0668,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x07BA,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x07E0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0800,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0830,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x08C0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_71:
+	.word 0x0188,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0208,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0250,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0300,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0398,0x0110,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0550,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0550,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x06B8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x06DC,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0718,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0878,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0878,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0A18,0x00F8,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0B1C,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_72:
+	.word 0x00E0,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x00F0,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0160,0x00B8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0180,0x00B8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x01A8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01B8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x01C8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0230,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0240,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0258,0x00C0,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0278,0x00C0,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x02F0,0x00D0,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0310,0x00D0,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0438,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0448,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0458,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0480,0x00A8,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x04A8,0x0088,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x04C8,0x00D8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x04E8,0x00D8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0550,0x0118,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0598,0x00B8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x05B8,0x00B8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0620,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0630,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0640,0x0120,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0658,0x00C0,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0690,0x0090,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x06B8,0x00E8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x06D8,0x00E8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x06E0,0x00A8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0700,0x00A8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0708,0x00D0,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0740,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0750,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0760,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0770,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0780,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0790,0x0138,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0790,0x00A0,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x07B0,0x00A0,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x07D0,0x00A0,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0820,0x00C8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0870,0x0128,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0890,0x0128,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x08B0,0x0128,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x08E0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08E0,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08F0,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08F0,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0900,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0900,0x0130,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0910,0x00A0,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0930,0x00A0,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0970,0x00C0,0x0093,0x0004,0x000B,0x0002,0x0002
+	.word 0x0990,0x0130,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0A50,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0x0A70,0x00E8,0x0091,0x0004,0x000A,0x0002,0x0002
+	.word 0xFFFF
+
+entities_73:
+	.word 0x0140,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0160,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0240,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0240,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0250,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0260,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0270,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x02A8,0x0100,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0340,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0350,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0360,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0370,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0380,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0398,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0478,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0488,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0498,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04A8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04B8,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x04D8,0x0100,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0578,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0598,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x05B8,0x0100,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x0610,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0620,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0630,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0668,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x06B0,0x00A8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06C0,0x00A8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x06D0,0x00A8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0748,0x0138,0x004D,0x0004,0x0003,0x0002,0x0003
+	.word 0x07A8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x07C8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x07E8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0840,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0860,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0880,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0880,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0890,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08A0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08B0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08C0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08D0,0x00D0,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08D0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0970,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x08B0,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08C0,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08D0,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x08E0,0x00F8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x09D8,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A30,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0A50,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AC8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AD8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AE8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0AF0,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B00,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B10,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B20,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B30,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0B40,0x00D8,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x0BB8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0BD8,0x015E,0x00A4,0x0004,0x000C,0x0002,0x0002
+	.word 0x0E34,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_74:
+	.word 0x0118,0x0130,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x0140,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x0160,0x0130,0x0075,0x0001,0x0003,0x0006,0x0001
+	.word 0x0676,0x00F4,0x0049,0x0005,0x0002,0x0001,0x0001
+	.word 0x0B30,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0BBA,0x00F0,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0BE0,0x0100,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0C00,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0C30,0x0110,0x0083,0x0005,0x0003,0x0003,0x0002
+	.word 0x0CC0,0x00F8,0x007E,0x0004,0x0007,0x0004,0x0005
+	.word 0xFFFF
+
+entities_81:
+	.word 0x0140,0x0140,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x01D8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x01F0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0208,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0220,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0238,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0258,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0278,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x03E8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0460,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0480,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04A0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x04C8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x04E8,0x0140,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0590,0x0100,0x0040,0x0002,0x0000,0x0003,0x0002
+	.word 0x05E8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0688,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x06B8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x06D8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0738,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0780,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x07A0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x07C0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0820,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0840,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0878,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x08C0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x08E0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0900,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x09B0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A50,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0A70,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0C80,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0CB8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0E10,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0E30,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0E50,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0E98,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0ED8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0B30,0x0108,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0FC0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0FE0,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x1040,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x1060,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x1080,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x1180,0x0138,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x12E8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x1438,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x1458,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x1478,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x1498,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x14B0,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x1560,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x1674,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_82:
+	.word 0x0118,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0150,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0180,0x0088,0x008A,0x0004,0x000F,0x0002,0x0002
+	.word 0x0310,0x0120,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0358,0x0120,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x03B0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0578,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0668,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x06B8,0x0138,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0758,0x0138,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0778,0x0138,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0838,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0868,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x08E8,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x09C8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0A38,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0A90,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0AB0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0B58,0x0110,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0B78,0x0110,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0BC0,0x0138,0x0095,0x0004,0x000E,0x0003,0x0002
+	.word 0x0C70,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0D64,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_83:
+	.word 0x01C0,0x00C8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x0358,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x03D8,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x03E8,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x05D8,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0758,0x00F8,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0768,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x07E8,0x0118,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x08D0,0x0138,0x0054,0x0004,0x0002,0x0002,0x0003
+	.word 0x0938,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0988,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0A38,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0A78,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0A98,0x0138,0x009A,0x0004,0x000D,0x0002,0x0003
+	.word 0x0CDC,0x00AC,0x0079,0x0001,0x0005,0x0002,0x0003
+	.word 0xFFFF
+
+entities_841:
+	.word 0x0138,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x02B8,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x02F8,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0318,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0358,0x0140,0x005B,0x0004,0x0001,0x0002,0x0002
+	.word 0x0408,0x0148,0x0075,0x0001,0x0004,0x0006,0x0001
+	.word 0x0498,0x0108,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0xFFFF
+
+entities_842:
+	.word 0x0148,0x0138,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0180,0x0108,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x01B0,0x00E8,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x01E8,0x0128,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0288,0x00E8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x02C0,0x0100,0x0059,0x0004,0x0006,0x0002,0x0003
+	.word 0x02EC,0x00E8,0x0059,0x0004,0x0006,0x0002,0x0003
+
+entities_843:
+	.word 0x0148,0x00F8,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0x0248,0x0108,0x005E,0x0004,0x0004,0x0002,0x0003
+	.word 0xFFFF
+
+entities_844:
+	.word 0x0140,0x00F8,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0190,0x00E8,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x01F8,0x0128,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x0288,0x00E0,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x02D0,0x0120,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x0338,0x0130,0x008C,0x0004,0x0008,0x0002,0x0003
+	.word 0x03A8,0x0100,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0x04A8,0x00E0,0x0049,0x0005,0x0001,0x0001,0x0001
+	.word 0xFFFF
+
+entities_845:
+	.word 0x0168,0x0140,0x0086,0x0005,0x0005,0x0002,0x0002
+	.word 0x02C0,0x00F8,0x007E,0x0004,0x0011,0x0004,0x0005
+	.word 0x03C0,0x00F0,0x00B9,0x0001,0x0008,0x0002,0x0002
+	.word 0xFFFF
+
+_lab_B5A2:
+	movem.l D2, -(A7)
+	lea (_lab_B5C0).l, A2
+	move.w 0x10(A6,D0.w), D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	jsr (A2)
+	movem.l (A7)+, D2
+	rts
+
+_lab_B5C0:
+	.long _lab_B5EC
+	.long _lab_B69C
+	.long _lab_B5EC
+	.long _lab_B720
+	.long _lab_B5EC
+	.long _lab_B774
+	.long _lab_B9C8
+	.long _lab_BAAA
+	.long _lab_BAAA
+	.long _lab_BBCC
+	.long _lab_BB7C
+
+_lab_B5EC:
+	subq.w #1, 0x2(A6,D0.w)
+	addq.w #1, 0xE(A6,D0.w)
+	cmpi.w #0xA, 0xE(A6,D0.w)
+	blt.w _lab_B69A
+	cmpi.w #0, 0x10(A6,D0.w)
+	bne.w _lab_B612
+	lea (_lab_BEE4).l, A2
+	bra.w _lab_B618
+_lab_B612:
+	lea (_lab_BEEC).l, A2
+_lab_B618:
+	move.w 0xA(A6,D0.w), TILE_COLLISION_X
+	move.w 0xC(A6,D0.w), TILE_COLLISION_Y
+	jsr (_lab_BE72).l
+	cmpi.w #2, 0x10(A6,D0.w)
+	beq.w _lab_B64E
+	cmpi.w #4, 0x10(A6,D0.w)
+	beq.w _lab_B668
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_B69A
+_lab_B64E:
+	subq.w #4, (A6,D0.w)
+	move.w #6, 0x10(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	move.w #0x40, 0x4(A6,D0.w)
+	bra.w _lab_B69A
+_lab_B668:
+	subq.w #6, 0x2(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	move.w 0x12(A6,D0.w), D1
+	subi.w #0xA, D1
+	addq.w #7, D1
+	move.w D1, 0x10(A6,D0.w)
+	move.w 0x12(A6,D0.w), D1
+	subi.w #0xA, D1
+	addi.w #0x45, D1
+	move.w D1, 0x4(A6,D0.w)
+	move.w #3, 0x8(A6,D0.w)
+	bra.w _lab_B69A
+_lab_B69A:
+	rts
+
+_lab_B69C:
+	move.w #0, D4
+_lab_B6A0:
+	move.w #0x16, D2
+_lab_B6A4:
+	move.w D2, D5
+	mulu.w #0x20, D5
+	cmpi.w #0, 0x4(A6,D5.w)
+	bne.w _lab_B6F6
+	lea (_lab_B710).l, A2
+	move.w D4, D1
+	mulu.w #4, D1
+	move.w (A6,D0.w), (A6,D5.w)
+	move.w (A2,D1.w), D3
+	add.w D3, (A6,D5.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D5.w)
+	move.w 0x2(A2,D1.w), D3
+	add.w D3, 0x2(A6,D5.w)
+	move.w #0x3F, 0x4(A6,D5.w)
+	move.w #5, 0x10(A6,D5.w)
+	move.b D4, 0x14(A6,D5.w)
+	move.w #0, 0xE(A6,D5.w)
+	bra.w _lab_B6FE
+_lab_B6F6:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.b _lab_B6A4
+_lab_B6FE:
+	addq.w #1, D4
+	cmpi.w #4, D4
+	blt.b _lab_B6A0
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	rts
+
+_lab_B710:
+	.word 0,0 ; top left
+	.word 8,0 ; top right
+	.word 0,8 ; bottom left
+	.word 8,8 ; bottom right
+
+_lab_B720:
+	subq.w #1, 0x2(A6,D0.w)
+	addq.w #1, 0xE(A6,D0.w)
+	cmpi.w #0xA, 0xE(A6,D0.w)
+	blt.w _lab_B772
+	lea (_lab_BEE4).l, A2
+	move.w 0xA(A6,D0.w), TILE_COLLISION_X
+	move.w 0xC(A6,D0.w), TILE_COLLISION_Y
+	jsr (_lab_BE72).l
+	subq.w #4, (A6,D0.w)
+	move.w #6, 0x10(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	move.w #0x40, 0x4(A6,D0.w)
+	subq.w #1, COIN_BLOCK_TIMER
+	move.w #0, COIN_BLOCK_SUBTIMER
+_lab_B772:
+	rts
+
+_lab_B774:
+	cmpi.b #2, 0x14(A6,D0.w)
+	bge.w _lab_B7D0
+	lea (_lab_B828).l, A2
+	move.w 0xE(A6,D0.w), D1
+	mulu.w #2, D1
+	cmpi.b #0x88, (A2,D1.w)
+	bne.w _lab_B7A2
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_B826
+_lab_B7A2:
+	move.b (A2,D1.w), D3
+	ext.w D3
+	move.b 0x1(A2,D1.w), D4
+	ext.w D4
+	cmpi.b #1, 0x14(A6,D0.w)
+	beq.w _lab_B7C4
+	sub.w D3, (A6,D0.w)
+	add.w D4, 0x2(A6,D0.w)
+	bra.w _lab_B822
+_lab_B7C4:
+	add.w D3, (A6,D0.w)
+	add.w D4, 0x2(A6,D0.w)
+	bra.w _lab_B822
+_lab_B7D0:
+	lea (_lab_B8E0).l, A2
+	move.w 0xE(A6,D0.w), D1
+	mulu.w #2, D1
+	cmpi.b #0x88, (A2,D1.w)
+	bne.w _lab_B7F4
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_B826
+_lab_B7F4:
+	move.b (A2,D1.w), D3
+	ext.w D3
+	move.b 0x1(A2,D1.w), D4
+	ext.w D4
+	cmpi.b #2, 0x14(A6,D0.w)
+	bne.w _lab_B816
+	sub.w D3, (A6,D0.w)
+	add.w D4, 0x2(A6,D0.w)
+	bra.w _lab_B822
+_lab_B816:
+	add.w D3, (A6,D0.w)
+	add.w D4, 0x2(A6,D0.w)
+	bra.w _lab_B822
+_lab_B822:
+	addq.w #1, 0xE(A6,D0.w)
+_lab_B826:
+	rts
+
+_lab_B828:
+	.byte 0,-1
+	.byte 1,-6
+	.byte 1,-6
+	.byte 1,-6
+	.byte 2,-5
+	.byte 1,-5
+	.byte 1,-5
+	.byte 2,-4
+	.byte 1,-4
+	.byte 1,-4
+	.byte 1,-3
+	.byte 1,-3
+	.byte 2,-3
+	.byte 1,-3
+	.byte 2,-2
+	.byte 1,-2
+	.byte 2,-2
+	.byte 2,1
+	.byte 2,1
+	.byte 2,2
+	.byte 0,2
+	.byte 1,2
+	.byte 1,3
+	.byte 0,3
+	.byte 1,3
+	.byte 0,3
+	.byte 1,3
+	.byte 0,4
+	.byte 1,4
+	.byte 0,4
+	.byte 0,5
+	.byte 1,5
+	.byte 0,5
+	.byte 0,6
+	.byte 0,6
+	.byte 0,6
+	.byte 1,7
+	.byte 0,7
+	.byte 0,7
+	.byte 0,7
+	.byte 0,7
+	.byte 0,9
+	.byte 0,9
+	.byte 0x88
+
+	.byte 0,-1
+	.byte 2,-5
+	.byte 2,-5
+	.byte 1,-3
+	.byte 1,-3
+	.byte 1,-3
+	.byte 2,-3
+	.byte 1,-2
+	.byte 1,-2
+	.byte 1,-2
+	.byte 1,-2
+	.byte 2,-2
+	.byte 0,-1
+	.byte 1,-1
+	.byte 1,-1
+	.byte 1,-1
+	.byte 1,-1
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,1
+	.byte 1,1
+	.byte 1,1
+	.byte 1,1
+	.byte 1,1
+	.byte 0,1
+	.byte 1,1
+	.byte 1,2
+	.byte 0,2
+	.byte 1,2
+	.byte 0,2
+	.byte 0,2
+	.byte 1,3
+	.byte 0,3
+	.byte 1,3
+	.byte 0,3
+	.byte 1,5
+	.byte 0,5
+	.byte 0,5
+	.byte 1,5
+	.byte 0,6
+	.byte 0,6
+	.byte 0,6
+	.byte 0,6
+	.byte 0,6
+	.byte 0,7
+	.byte 0,7
+	.byte 0,7
+	.byte 0x88
+
+_lab_B8E0:
+	.byte 1,-1
+	.byte 2,-5
+	.byte 2,-5
+	.byte 2,-5
+	.byte 2,-4
+	.byte 2,-4
+	.byte 3,-4
+	.byte 2,-3
+	.byte 3,-3
+	.byte 3,-3
+	.byte 2,-1
+	.byte 2,-1
+	.byte 2,0
+	.byte 2,-1
+	.byte 2,1
+	.byte 2,0
+	.byte 2,2
+	.byte 2,1
+	.byte 2,2
+	.byte 3,3
+	.byte 3,3
+	.byte 2,3
+	.byte 1,3
+	.byte 2,4
+	.byte 2,4
+	.byte 1,4
+	.byte 2,5
+	.byte 1,5
+	.byte 2,5
+	.byte 1,5
+	.byte 2,7
+	.byte 1,7
+	.byte 2,7
+	.byte 1,9
+	.byte 1,9
+	.byte 0x88
+
+	.byte 1,-1
+	.byte 3,-3
+	.byte 2,-3
+	.byte 3,-3
+	.byte 3,-3
+	.byte 2,-2
+	.byte 2,-1
+	.byte 2,-1
+	.byte 2,-1
+	.byte 2,-1
+	.byte 2,-1
+	.byte 1,0
+	.byte 1,0
+	.byte 1,-1
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,0
+	.byte 1,1
+	.byte 1,0
+	.byte 1,0
+	.byte 1,1
+	.byte 1,0
+	.byte 1,1
+	.byte 1,0
+	.byte 1,1
+	.byte 1,1
+	.byte 2,1
+	.byte 2,2
+	.byte 2,2
+	.byte 2,2
+	.byte 1,2
+	.byte 2,3
+	.byte 1,3
+	.byte 2,3
+	.byte 1,3
+	.byte 1,3
+	.byte 2,5
+	.byte 1,5
+	.byte 1,5
+	.byte 1,5
+	.byte 1,7
+	.byte 1,7
+	.byte 1,7
+	.byte 0x88
+
+_lab_B986:
+	.word 0x0001
+	.word 0x0001
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0000
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0003
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x00FF
+
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x0005
+	.word 0x00FF
+
+_lab_B9C8:
+	cmpi.b #1, 0x14(A6,D0.w)
+	beq.w _lab_BA2C
+	lea (_lab_BA7C), A2
+	move.w 0xE(A6,D0.w), D1
+	mulu.w #2, D1
+	cmpi.w #0xFF, (A2,D1.w)
+	bne.w _lab_B9F4
+	move.b #1, 0x14(A6,D0.w)
+	bra.w _lab_BA7A
+_lab_B9F4:
+	move.w (A2,D1.w), D3
+	sub.w D3, 0x2(A6,D0.w)
+	addq.w #1, 0xE(A6,D0.w)
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_BA7A
+	cmpi.w #0x40, 0x4(A6,D0.w)
+	beq.w _lab_BA22
+	move.w #0x40, 0x4(A6,D0.w)
+	bra.w _lab_BA7A
+_lab_BA22:
+	move.w #0x41, 0x4(A6,D0.w)
+	bra.w _lab_BA7A
+_lab_BA2C:
+	addq.w #1, 0x4(A6,D0.w)
+	cmpi.w #0x44, 0x4(A6,D0.w)
+	ble.w _lab_BA7A
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	addq.w #1, PLAYER_COINS
+	cmpi.w #0x64, PLAYER_COINS
+	blt.w _lab_BA7A
+	move.w #0, PLAYER_COINS
+	addq.w #1, PLAYER_LIVES
+	cmpi.w #9, PLAYER_LIVES
+	ble.w _lab_BA7A
+	move.w #9, PLAYER_LIVES
+	bra.w _lab_BA7A
+_lab_BA7A:
+	rts
+
+_lab_BA7C:
+	.word 0x0006
+	.word 0x0006
+	.word 0x0006
+	.word 0x0005
+	.word 0x0005
+	.word 0x0004
+	.word 0x0004
+	.word 0x0004
+	.word 0x0003
+	.word 0x0003
+	.word 0x0002
+	.word 0x0002
+	.word 0x0002
+	.word 0x0001
+	.word 0x0000
+	.word 0x0000
+	.word 0xFFFF
+	.word 0xFFFF
+	.word 0xFFFE
+	.word 0xFFFE
+	.word 0xFFFD
+	.word 0xFFFD
+	.word 0x00FF
+
+_lab_BAAA:
+	cmpi.b #0, 0x14(A6,D0.w)
+	bne.w _lab_BAE2
+	addq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #2, ENTITY_WIDTH
+	jsr (_lab_BD3A).l
+	cmpi.b #0, 0x16(A6,D0.w)
+	beq.w _lab_BB10
+	move.b #1, 0x14(A6,D0.w)
+	bra.w _lab_BB10
+_lab_BAE2:
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #3, ENTITY_WIDTH
+	jsr (_lab_BD3A).l
+	cmpi.b #0, 0x16(A6,D0.w)
+	beq.w _lab_BB10
+	move.b #0, 0x14(A6,D0.w)
+	bra.w _lab_BB10
+_lab_BB10:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #2, ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #0, 0x16(A6,D0.w)
+	bne.w _lab_BB38
+	addq.w #8, 0x2(A6,D0.w)
+	bra.w _lab_BB38
+_lab_BB38:
+	cmpi.w #0x64, (A6,D0.w)
+	bge.w _lab_BB4E
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BB7A
+_lab_BB4E:
+	cmpi.w #0x180, (A6,D0.w)
+	ble.w _lab_BB64
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BB7A
+_lab_BB64:
+	cmpi.w #0x180, 0x2(A6,D0.w)
+	ble.w _lab_BB7A
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BB7A
+_lab_BB7A:
+	rts
+
+_lab_BB7C:
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_BBCA
+	addq.w #1, 0xE(A6,D0.w)
+	cmpi.w #0x50, 0xE(A6,D0.w)
+	blt.w _lab_BBCA
+	cmpi.w #0, 0x4(A6,D0.w)
+	bne.w _lab_BBAC
+	move.w 0x18(A6,D0.w), 0x4(A6,D0.w)
+	bra.w _lab_BBB8
+_lab_BBAC:
+	move.w 0x4(A6,D0.w), 0x18(A6,D0.w)
+	move.w #0, 0x4(A6,D0.w)
+_lab_BBB8:
+	cmpi.w #0x70, 0xE(A6,D0.w)
+	blt.w _lab_BBCA
+	move.w D0, D1
+	jsr (_lab_CF24).l
+_lab_BBCA:
+	rts
+
+_lab_BBCC:
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_BBF4
+	cmpi.w #0x76, 0x4(A6,D0.w)
+	beq.w _lab_BBEE
+	move.w #0x76, 0x4(A6,D0.w)
+	bra.w _lab_BBF4
+_lab_BBEE:
+	move.w #0x47, 0x4(A6,D0.w)
+_lab_BBF4:
+	cmpi.b #0, 0x14(A6,D0.w)
+	bne.w _lab_BC3E
+	lea (_lab_BD06).l, A2
+	move.w 0xE(A6,D0.w), D1
+	mulu.w #4, D1
+	cmpi.w #0x8888, (A2,D1.w)
+	bne.w _lab_BC26
+	move.b #1, 0x14(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	bra.w _lab_BD04
+_lab_BC26:
+	move.w (A2,D1.w), D2
+	add.w D2, (A6,D0.w)
+	move.w 0x2(A2,D1.w), D2
+	add.w D2, 0x2(A6,D0.w)
+	addq.w #1, 0xE(A6,D0.w)
+	bra.w _lab_BD04
+_lab_BC3E:
+	addq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #2, ENTITY_WIDTH
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_BC9A
+	move.b #1, 0x14(A6,D0.w)
+	bra.w _lab_BC9A
+_lab_BC6C:
+	subq.w #1, (A6,D0.w)
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #2, ENTITY_WIDTH
+	jsr (_lab_BD3A).l
+	cmpi.b #4, 0x16(A6,D0.w)
+	bne.w _lab_BC9A
+	move.b #0, 0x14(A6,D0.w)
+	bra.w _lab_BC9A
+_lab_BC9A:
+	move.w (A6,D0.w), D3
+	move.w 0x2(A6,D0.w), D4
+	move.w #2, ENTITY_HEIGHT
+	jsr (_lab_BDE4).l
+	cmpi.b #0, 0x16(A6,D0.w)
+	bne.w _lab_BCC2
+	addq.w #8, 0x2(A6,D0.w)
+	bra.w _lab_BCC2
+_lab_BCC2:
+	cmpi.w #0x64, (A6,D0.w)
+	bge.w _lab_BCD8
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BD04
+_lab_BCD8:
+	cmpi.w #0x180, (A6,D0.w)
+	ble.w _lab_BCEE
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BD04
+_lab_BCEE:
+	cmpi.w #0x180, 0x2(A6,D0.w)
+	ble.w _lab_BD04
+	move.w D0, D1
+	jsr (_lab_CF24).l
+	bra.w _lab_BD04
+_lab_BD04:
+	rts
+
+_lab_BD06:
+	.word 0x0001,0xFFFE
+	.word 0x0001,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0001,0xFFFE
+	.word 0x0001,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0001,0xFFFE
+	.word 0x0001,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x0002,0xFFFE
+	.word 0x8888
+
+_lab_BD38:
+	rts
+
+_lab_BD3A:
+	movem.l D0-D4, -(A7)
+	cmpi.w #0x180, D3
+	blt.w _lab_BD50
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_BDDE
+_lab_BD50:
+	cmpi.w #0x78, D3
+	bgt.w _lab_BD62
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_BDDE
+_lab_BD62:
+	clr.l, D1
+	clr.l, D2
+	move.w D3, D1
+	subi.w #0x80, D1
+	add.w SCROLL_OFFSET, D1
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	add.w D3, D1
+	divu.w #8, D1
+	add.w ENTITY_WIDTH, D1
+	cmpi.b #0, 0x14(A6,D0.w)
+	beq.w _lab_BD98
+	sub.w ENTITY_WIDTH, D1
+_lab_BD98:
+	andi.l #0xFFFF, D1
+	divu.w #0x40, D1
+	move.w D1, D3
+	swap D1
+	move.w D4, D2
+	subi.w #0x80, D2
+	divu.w #8, D2
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	add.w D2, D1
+	clr.l D2
+	move.b (A2,D1.w), D2
+	move.w #0, D3
+_lab_BDC6:
+	cmpi.b #0, D2
+	bne.w _lab_BDDA
+	addi.w #0x40, D1
+	move.b (A2,D1.w), D2
+	dbf D3, _lab_BDC6
+_lab_BDDA:
+	move.b D2, 0x16(A6,D0.w)
+_lab_BDDE:
+	movem.l (A7)+, D0-D4
+	rts
+
+_lab_BDE4:
+	movem.l D0-D4, -(A7)
+	cmpi.w #0x168, D4
+	blt.w _lab_BDFA
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_BE6C
+_lab_BDFA:
+	cmpi.w #0x60, D4
+	bgt.w _lab_BE0C
+	move.b #0, 0x16(A6,D0.w)
+	bra.w _lab_BE6C
+_lab_BE0C:
+	clr.l D1
+	clr.l D2
+	move.w D3, D1
+	subi.w #0x80, D1
+	add.w SCROLL_OFFSET, D1
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	add.w D3, D1
+	divu.w #8, D1
+	andi.l #0xFFFF, D1
+	divu.w #0x40, D1
+	move.w D1, D3
+	swap D1
+	move.w D4, D2
+	subi.w #0x80, D2
+	divu.w #8, D2
+	add.w ENTITY_HEIGHT, D2
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	add.w D2, D1
+	clr.l D2
+	move.b (A2,D1.w), D2
+	cmpi.b #0, D2
+	bne.w _lab_BE68
+	move.b 0x1(A2,D1.w), D2
+_lab_BE68:
+	move.b D2, 0x16(A6,D0.w)
+_lab_BE6C:
+	movem.l (A7)+, D0-D4
+	rts
+
+_lab_BE72:
+	movem.l D1/D2/D3/A2, -(A7)
+	clr.l D1
+	clr.l D2
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w D1, D3
+	andi.l #0xFFFF, D3
+	divu.w #2, D3
+	swap D3
+	cmpi.w #0, D3
+	beq.w _lab_BE9E
+	subq.w #1, D1
+_lab_BE9E:
+	move.w D1, TILE_COLLISION_X
+	move.w D2, TILE_COLLISION_Y
+	mulu.w #0x80, D2
+	swap D2
+	mulu.w #2, D1
+	swap D1
+	add.l D1, D2
+	addi.l #0x60000002, D2
+	move.l D2, (A1)
+	move.w (A2), (A0)
+	move.w 0x2(A2), (A0)
+	addi.l #0x800000, D2
+	move.l D2, (A1)
+	move.w 0x4(A2), (A0)
+	move.w 0x6(A2), (A0)
+	movem.l (A7)+, D1/D2/D3/A2
+	rts
+
+_lab_BEDC:       ; mystery block
+	.word 0x248A
+	.word 0x248C
+	.word 0x248B
+	.word 0x248D
+
+_lab_BEE4:       ; brick
+	.word 0x248E
+	.word 0x2490
+	.word 0x248F
+	.word 0x2491
+
+_lab_BEEC:       ; empty block
+	.word 0x2492
+	.word 0x2494
+	.word 0x2493
+	.word 0x2495
+
+_lab_BEF4:
+	jsr (_lab_C52A).l
+	cmpi.w #0x1, TILE_GROUND
+	beq.w _lab_BF60
+	cmpi.w #0x5, TILE_GROUND
+	beq.w _lab_BF60
+	cmpi.w #0x10, TILE_GROUND
+	beq.w _lab_BF60
+	jsr (_lab_C264).l
+	cmpi.b #1, 0xFF715D
+	beq.w _lab_BF60
+	move.w #2, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	move.w #3, 0xFF7150
+	move.b #1, 0xFF7152
+	move.w #0, PLAYER_WALKSPEED
+_lab_BF60:
+	cmpi.w #0x160, PLR_POS_Y
+	blt.w _lab_BF8C
+	move.w #9, 0xFF7148
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF714A
+	move.w #0, 0xFF7150
+_lab_BF8C:
+	rts
+
+_lab_BF8E:
+	cmpi.w #0, PLAYER_SWIM
+	beq.w _lab_BFB2
+	move.w GLOBAL_TIMER, D1
+	andi.w #1, D1
+	bne.w _lab_C0DE
+	lea (_lab_C104).l, A2
+	bra.w _lab_BFB8
+_lab_BFB2:
+	lea (_lab_C0E0).l, A2
+_lab_BFB8:
+	move.w 0xFF7150, D1
+	move.b (A2,D1.w), D2
+	ext.w d2
+	cmpi.b #0, 0xFF7152
+	bne.w _lab_C048
+	cmpi.w #1, PLAYER_SWIM
+	bne.w _lab_BFE8
+	cmpi.w #0xA0, PLR_POS_Y
+	ble.w _lab_C036
+_lab_BFE8:
+	add.w D2, PLR_POS_Y
+	addq.w #1, 0xFF7150
+	jsr (_lab_C5F2).l
+	cmpi.w #0x1, TILE_HIT
+	beq.w _lab_C02A
+	cmpi.w #0x4, TILE_HIT
+	beq.w _lab_C02A
+	cmpi.w #0xD, TILE_HIT
+	beq.w _lab_C02A
+	cmpi.w #0x0, TILE_HIT
+	bne.w _lab_C036
+_lab_C02A:
+	cmpi.w #0x18, 0xFF7150
+	blt.w _lab_C0DE
+_lab_C036:
+	subq.w #1, 0xFF7150
+	move.b #1, 0xFF7152
+	bra.w _lab_C0DE
+_lab_C048:
+	sub.w D2, PLR_POS_Y
+	subq.w #1, 0xFF7150
+	jsr (_lab_C52A).l
+	cmpi.w #0x1, TILE_GROUND
+	beq.w _lab_C082
+	cmpi.w #0x5, TILE_GROUND
+	beq.w _lab_C082
+	cmpi.w #0x10, TILE_GROUND
+	beq.w _lab_C082
+	bra.w _lab_C09A
+_lab_C082:
+	clr.l D1
+	move.w PLR_POS_Y, D1
+	divu.w #8, D1
+	swap D1
+	sub.w D1, PLR_POS_Y
+	bra.w _lab_C0BE
+_lab_C09A:
+	cmpi.w #1, PLAYER_SWIM
+	beq.w _lab_C0B2
+	jsr (_lab_C120).l
+	jsr (_lab_C264).l
+_lab_C0B2:
+	cmpi.w #0, 0xFF7150
+	bge.w _lab_C0DE
+_lab_C0BE:
+	move.w #0, 0xFF7150
+	move.b #0, 0xFF7152
+	move.w #0, 0xFF7148
+	move.w #0, 0xFF714A
+_lab_C0DE:
+	rts
+
+_lab_C0E0:
+	.byte 0xFF,0xF9,0xF9,0xFA
+	.byte 0xFA,0xFA,0xFB,0xFB
+	.byte 0xFB,0xFD,0xFD,0xFE
+	.byte 0xFB,0xFD,0xFD,0xFE
+	.byte 0xFD,0xFE,0x00,0xFF
+	.byte 0xFF,0xFF,0xFF,0x00
+	.byte 0xFF,0xFF,0xFF,0x00
+	.byte 0x00,0xFF,0x00,0x00
+	.byte 0x00,0x00,0x00,0x00
+
+_lab_C104:
+	.byte 0xFC,0xFC,0xFD,0xFD
+	.byte 0xFE,0xFE,0xFE,0xFF
+	.byte 0xFF,0x00,0xFE,0xFF
+	.byte 0x00,0xFF,0x00,0xFF
+	.byte 0xFF,0xFF,0xFF,0x00
+	.byte 0x00,0xFF,0x00,0x00
+	.byte 0x00,0x00,0x00,0x00
+
+_lab_C120:
+	move.w #0, PLAYER_INTERSECT_ENEMY
+	move.w #0x16, D2
+_lab_C12C:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	beq.w _lab_C250
+	cmpi.w #4, 0x8(A6,D0.w)
+	beq.w _lab_C14A
+	bra.w _lab_C250
+_lab_C14A:
+	move.w PLR_POS_X, PLAYER_COLLIDE_LEFT
+	move.w PLR_POS_Y, PLAYER_COLLIDE_TOP
+	lea (_lab_401E), A2
+	move.w PLR_SPRITE, D1
+	cmpi.w #0, D1
+	bne.w _lab_C178
+	move.w PLAYER_FLASHING_SPRITE, D1
+_lab_C178:
+	mulu.w #4, D1
+	move.w (A2,D1.w), PLAYER_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), D3
+	add.w D3, PLAYER_COLLIDE_TOP
+	move.w #0, PLAYER_COLLIDE_BOTTOM
+	move.w (A6,D0.w), ENTITY_COLLIDE_LEFT
+	move.w 0x2(A6,D0.w), ENTITY_COLLIDE_TOP
+	move.w 0x4(A6,D0.w), D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), ENTITY_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), ENTITY_COLLIDE_BOTTOM
+	jsr (_lab_4592).l
+	cmpi.w #0, PLAYER_INTERSECT_ENEMY
+	beq.w _lab_C250
+	cmpi.b #2, 0x15(A6,D0.w)
+	bne.w _lab_C1E4
+	move.b #1, 0x1A(A6,D0.w)
+	bra.w _lab_C262
+_lab_C1E4:
+	move.w #0x59, 0xFF6C02
+	jsr (play_sound).l
+	move.b #1, 0xFF7159
+	move.b #2, 0x15(A6,D0.w)
+	move.b #0, 0x1A(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	move.b #0, 0x17(A6,D0.w)
+	move.w #0, D3
+	jsr (_lab_C428).l
+	move.w #2, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	move.w #0, 0xFF7150
+	move.b #0, 0xFF7152
+	move.w #1, JUMP_HOLD
+	bra.w _lab_C262
+_lab_C250:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_C12C
+	move.b #0, 0xFF7159
+_lab_C262:
+	rts
+
+_lab_C264:
+	move.w #0, PLAYER_INTERSECT_ENEMY
+	move.w #0x16, D2
+_lab_C270:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	beq.w _lab_C352
+	cmpi.w #1, 0x8(A6,D0.w)
+	beq.w _lab_C28E
+	bra.w _lab_C352
+_lab_C28E:
+	move.w PLR_POS_X, PLAYER_COLLIDE_LEFT
+	move.w PLR_POS_Y, PLAYER_COLLIDE_TOP
+	lea (_lab_401E).l, A2
+	move.w PLR_SPRITE, D1
+	cmpi.w #0, D1
+	bne.w _lab_C2BC
+	move.w PLAYER_FLASHING_SPRITE, D1
+_lab_C2BC:
+	mulu.w #4, D1
+	move.w (A2,D1.w), PLAYER_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), D3
+	add.w D3, PLAYER_COLLIDE_TOP
+	move.w #0, PLAYER_COLLIDE_BOTTOM
+	move.w (A6,D0.w), ENTITY_COLLIDE_LEFT
+	move.w 0x2(A6,D0.w), ENTITY_COLLIDE_TOP
+	move.w 0x4(A6,D0.w), D1
+	mulu.w #4, D1
+	move.w (A2,D1.w), ENTITY_COLLIDE_RIGHT
+	move.w 0x2(A2,D1.w), ENTITY_COLLIDE_BOTTOM
+	jsr (_lab_4592).l
+	cmpi.w #0, PLAYER_INTERSECT_ENEMY
+	beq.w _lab_C352
+	move.b #1, 0xFF715D
+	move.b #1, 0x12(A6,D0.w)
+	move.w 0x2(A6,D0.w), D1
+	subi.w #0x18, D1
+	subq.w #8, D1
+	cmpi.w #0x25, CURR_LEVEL
+	beq.w _lab_C36A
+	move.w D1, PLR_POS_Y
+	move.w #0xFFFF, 0xFF7150
+	move.b #0, 0xFF7152
+	bra.w _lab_C36A
+_lab_C352:
+	move.b #0, 0x12(A6,D0.w)
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_C270
+	move.b #0, 0xFF715D
+_lab_C36A:
+	rts
+
+_lab_C36C:
+	move.w #0x12, D2
+_lab_C370:
+	move.w D2, D1
+	mulu.w #0x20, D1
+	cmpi.w #0, 0x4(A6,D1.w)
+	beq.w _lab_C3CA
+	subq.w #1, 0x2(A6,D1.w)
+	addq.w #1, 0x8(A6,D1.w)
+	cmpi.w #0x20, 0x8(A6,D1.w)
+	blt.w _lab_C3DC
+	lea (BUF_PLAYER_DIGITS).l, A2
+	cmpi.w #0x77, 0x4(A6,D1.w)
+	bne.w _lab_C3B2
+	move.w #3, D3
+	mulu.w #2, D3
+	addq.w #2, (A2,D3.w)
+	bra.w _lab_C3BE
+_lab_C3B2:
+	move.w #2, D3
+	mulu.w #2, D3
+	addq.w #1, (A2,D3.w)
+_lab_C3BE:
+	jsr (_lab_CF24).l
+	jsr (_lab_C3DE).l
+_lab_C3CA:
+	addq.w #1, D2
+	cmpi.w #0x15, D2
+	ble.b _lab_C370
+	bra.w _lab_C3DC
+_lab_C3D6:
+	jsr (_lab_C3DE).l
+_lab_C3DC:
+	rts
+
+_lab_C3DE:
+	movem.l D0-D4/A2, -(A7)
+	lea (BUF_PLAYER_DIGITS).l, A2
+	move.w #5, D2
+_lab_C3EC:
+	move.w D2, D1
+	mulu.w #2, D1
+	cmpi.w #9, (A2,D1.w)
+	ble.w _lab_C41A
+	cmpi.w #0, D2
+	bne.w _lab_C40E
+	move.w #9, (A2,D1.w)
+	bra.w _lab_C41A
+_lab_C40E:
+	subi.w #0xA, (A2,D1.w)
+	subq.w #2, D1
+	addq.w #1, (A2,D1.w)
+_lab_C41A:
+	subq.w #1, D2
+	cmpi.w #0, D2
+	bge.b _lab_C3EC
+	movem.l (A7)+, D0-D4/A2
+	rts
+
+_lab_C428:
+	movem.l D0-D4, -(A7)
+	move.w #0x12, D2
+_lab_C430:
+	move.w D2, D1
+	mulu.w #0x20, D1
+	cmpi.w #0, 0x4(A6,D1.w)
+	bne.w _lab_C45A
+	move.w (A6,D0.w), (A6,D1.w)
+	move.w 0x2(A6,D0.w), 0x2(A6,D1.w)
+	move.w #0x77, 0x4(A6,D1.w)
+	add.w D3, 0x4(A6,D1.w)
+	bra.w _lab_C462
+_lab_C45A:
+	addq.w #1, D2
+	cmpi.w #0x15, D2
+	ble.b _lab_C430
+_lab_C462:
+	movem.l (A7)+, D0-D4
+	rts
+
+_lab_C468:
+	cmpi.w #0x140, PLR_POS_Y
+	blt.w _lab_C480
+	move.w #0, TILE_SIDE
+	bra.w _lab_C528
+_lab_C480:
+	cmpi.w #0x7C, PLR_POS_Y
+	bgt.w _lab_C498
+	move.w #0, TILE_SIDE
+	bra.w _lab_C528
+_lab_C498:
+	clr.l D1
+	clr.l D2
+	move.w PLR_POS_X, D1
+	subi.w #0x80, D1
+	add.w SCROLL_OFFSET, D1
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	add.w D3, D1
+	divu.w #8, D1
+	addq.w #2, D1
+	cmpi.w #0, 0xFF714E
+	beq.w _lab_C4CC
+	subq.w #2, D1
+_lab_C4CC:
+	andi.l #0xFFFF, D1
+	divu.w #0x40, D1
+	move.w D1, D3
+	swap D1
+	move.w PLR_POS_Y, D2
+	cmpi.w #1, PLAYER_SIZE
+	bne.w _lab_C4EE
+	addq.w #8, D2
+_lab_C4EE:
+	subi.w #0x80, D2
+	divu.w #8, D2
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	add.w D2, D1
+	clr.l D2
+	move.b (A2,D1.w), D2
+	move.w #1, D3
+_lab_C50C:
+	cmpi.b #0, D2
+	bne.w _lab_C520
+	addi.w #0x40, D1
+	move.b (A2,D1.w), D2
+	dbf D3, _lab_C50C
+_lab_C520:
+	ext.w D2
+	move.w D2, TILE_SIDE
+_lab_C528:
+	rts
+
+_lab_C52A:
+	cmpi.w #0x140, PLR_POS_Y
+	blt.w _lab_C542
+	move.w #0, TILE_GROUND
+	bra.w _lab_C5F0
+_lab_C542:
+	cmpi.w #0x7C, PLR_POS_Y
+	bgt.w _lab_C55A
+	move.w #0, TILE_GROUND
+	bra.w _lab_C5F0
+_lab_C55A:
+	clr.l D1
+	clr.l D2
+	move.w PLR_POS_X, D1
+	subi.w #0x80, D1
+	add.w SCROLL_OFFSET, D1
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	add.w D3, D1
+	divu.w #8, D1
+	andi.l #0xFFFF, D1
+	divu.w #0x40, D1
+	move.w D1, D3
+	swap D1
+	move.w PLR_POS_Y, D2
+	subi.w #0x80, D2
+	divu.w #8, D2
+	addq.w #3, D2
+	cmpi.w #1, PLAYER_SIZE
+	bne.w _lab_C5AA
+	addq.w #1, D2
+_lab_C5AA:
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	move.w #0, D5
+	cmpi.w #0x3F, D1
+	bne.w _lab_C5C4
+	move.w #1, D5
+_lab_C5C4:
+	add.w D2, D1
+	clr.l D2
+	move.b (A2,D1.w), D2
+	cmpi.b #1, D2
+	beq.w _lab_C5E8
+	cmpi.b #5, D2
+	beq.w _lab_C5E8
+	cmpi.w #1, D5
+	beq.w _lab_C5E8
+	move.b 0x1(A2,D1.w), D2
+_lab_C5E8:
+	ext.w D2
+	move.w D2, TILE_GROUND
+_lab_C5F0:
+	rts
+
+_lab_C5F2:
+	cmpi.w #0x140, PLR_POS_Y
+	blt.w _lab_C60A
+	move.w #0, TILE_HIT
+	bra.w _lab_C7D4
+_lab_C60A:
+	cmpi.w #0x80, PLR_POS_Y
+	bgt.w _lab_C622
+	move.w #0, TILE_HIT
+	bra.w _lab_C7D4
+_lab_C622:
+	clr.l D1
+	clr.l D2
+	move.w PLR_POS_X, D1
+	addq.w #3, D1
+	subi.w #0x80, D1
+	add.w SCROLL_OFFSET, D1
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	add.w D3, D1
+	divu.w #8, D1
+	move.w D1, HIT_TILE_INDEX
+	andi.l #0xFFFF, D1
+	divu.w #0x40, D1
+	move.w D1, D3
+	swap D1
+	move.w D1, TILE_COLLISION_X
+	move.w PLR_POS_Y, D2
+	subi.w #0x80, D2
+	divu.w #8, D2
+	move.w D2, TILE_COLLISION_Y
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	add.w D2, D1
+	clr.l D2
+	move.b (A2,D1.w), D2
+	cmpi.b #1, D2
+	beq.w _lab_C6A0
+	cmpi.b #4, D2
+	beq.w _lab_C6A0
+	cmpi.b #0, D2
+	bne.w _lab_C6B0
+_lab_C6A0:
+	move.b 0x1(A2,D1.w), D2
+	addq.w #1, TILE_COLLISION_X
+	addq.w #1, HIT_TILE_INDEX
+_lab_C6B0:
+	ext.w D2
+	move.w D2, TILE_HIT
+	cmpi.w #0, TILE_HIT
+	beq.w _lab_C7D4
+	cmpi.w #0x2, TILE_HIT
+	beq.w _lab_C710
+	cmpi.w #0x3, TILE_HIT
+	beq.w _lab_C710
+	cmpi.w #0x6, TILE_HIT
+	beq.w _lab_C710
+	cmpi.w #0xA, TILE_HIT
+	beq.w _lab_C710
+	cmpi.w #0xB, TILE_HIT
+	beq.w _lab_C710
+	cmpi.w #0xC, TILE_HIT
+	beq.w _lab_C710
+	bra.w _lab_C7D4
+_lab_C710:
+	clr.l D1
+	clr.l D2
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	subq.w #1, D2
+	move.w D1, D3
+	andi.l #0xFFFF, D3
+	divu.w #2, D3
+	swap D3
+	cmpi.w #0, D3
+	beq.w _lab_C73A
+	subq.w #1, D1
+_lab_C73A:
+	move.w D1, TILE_COLLISION_X
+	move.w D2, TILE_COLLISION_Y
+	mulu.w #0x80, D2
+	swap D2
+	mulu.w #2, D1
+	swap D1
+	add.l D1, D2
+	addi.l #0x60000002, D2
+	move.l D2, (A1)
+	move.w #0, (A0)
+	move.w #0, (A0)
+	addi.l #0x800000, D2
+	move.l D2, (A1)
+	move.w #0, (A0)
+	move.w #0, (A0)
+	clr.l D1
+	clr.l D2
+	clr.l D3
+	move.w HIT_TILE_INDEX, D1
+	move.w TILE_COLLISION_Y, D2
+	mulu.w #8, D2
+	addi.w #0x80, D2
+	move.w D1, D3
+	andi.l #0xFFFF, D3
+	divu.w #2, D3
+	swap D3
+	cmpi.w #0, D3
+	beq.w _lab_C7A6
+	subq.w #1, D1
+_lab_C7A6:
+	mulu.w #8, D1
+	clr.l D3
+	move.w SCREENS_CROSSED, D3
+	mulu.w #0x100, D3
+	sub.w D3, D1
+	sub.w SCROLL_OFFSET, D1
+	addi.w #0x80, D1
+	move.w D1, MVT_POS_X
+	move.w D2, MVT_POS_Y
+	jsr (_lab_C7D6).l
+_lab_C7D4:
+	rts
+
+_lab_C7D6:
+	move.w #0x16, D2
+_lab_C7DA:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	bne.w _lab_CA48
+	cmpi.w #0, 0x18(A6,D0.w)
+	bne.w _lab_CA48
+	move.w MVT_POS_X, (A6,D0.w)
+	move.w MVT_POS_Y, 0x2(A6,D0.w)
+	move.w #0x3E, 0x4(A6,D0.w)
+	jsr (_lab_3C92).l
+	cmpi.w #2, TILE_HIT
+	bne.w _lab_C858
+	move.w #0x62, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0x3E, 0x4(A6,D0.w)
+	move.w #2, 0x10(A6,D0.w)
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #7, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	bra.w _lab_CA28
+_lab_C858:
+	cmpi.w #3, TILE_HIT
+	bne.w _lab_C8B6
+	move.w #0x3D, 0x4(A6,D0.w)
+	cmpi.w #1, PLAYER_SIZE
+	beq.w _lab_C880
+	move.w #0, 0x10(A6,D0.w)
+	bra.w _lab_CA28
+_lab_C880:
+	move.w #0x68, 0xFF6C02
+	jsr (play_sound).l
+	move.w #1, 0x10(A6,D0.w)
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #0, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	bra.w _lab_CA28
+_lab_C8B6:
+	cmpi.w #6, TILE_HIT
+	bne.w _lab_C928
+	move.w #0x62, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0x3D, 0x4(A6,D0.w)
+	move.w #3, 0x10(A6,D0.w)
+	move.w #9, 0x12(A6,D0.w)
+	cmpi.w #0, COIN_BLOCK_TIMER
+	bgt.w _lab_C8FA
+	move.w #9, COIN_BLOCK_TIMER
+	bra.w _lab_CA28
+_lab_C8FA:
+	cmpi.w #1, COIN_BLOCK_TIMER
+	bne.w _lab_CA28
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #2, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	bra.w _lab_CA28
+_lab_C928:
+	cmpi.w #0xA, TILE_HIT
+	bne.w _lab_C98C
+	move.w #0x5E, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0x3E, 0x4(A6,D0.w)
+	move.w #4, 0x10(A6,D0.w)
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #7, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	cmpi.w #1, PLAYER_SIZE
+	beq.w _lab_C982
+	move.w #0xB, 0x12(A6,D0.w)
+	bra.w _lab_CA28
+_lab_C982:
+	move.w #0xD, 0x12(A6,D0.w)
+	bra.w _lab_CA28
+_lab_C98C:
+	cmpi.w #0xB, TILE_HIT
+	bne.w _lab_C9DA
+	move.w #0x5E, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0x3E, 0x4(A6,D0.w)
+	move.w #4, 0x10(A6,D0.w)
+	move.w #0xA, 0x12(A6,D0.w)
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #7, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	bra.w _lab_CA28
+_lab_C9DA:
+	cmpi.w #0xC, TILE_HIT
+	bne.w _lab_CA28
+	move.w #0x5E, 0xFF6C02
+	jsr (play_sound).l
+	move.w #0x3E, 0x4(A6,D0.w)
+	move.w #4, 0x10(A6,D0.w)
+	move.w #0xC, 0x12(A6,D0.w)
+	movem.l D2, -(A7)
+	move.w TILE_COLLISION_X, D1
+	move.w TILE_COLLISION_Y, D2
+	move.w #7, D3
+	jsr (_lab_CA54).l
+	movem.l (A7)+, D2
+	bra.w _lab_CA28
+_lab_CA28:
+	move.w #0, 0x8(A6,D0.w)
+	move.w TILE_COLLISION_X, 0xA(A6,D0.w)
+	move.w TILE_COLLISION_Y, 0xC(A6,D0.w)
+	move.w #0, 0xE(A6,D0.w)
+	bra.w _lab_CA52
+_lab_CA48:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.w _lab_C7DA
+_lab_CA52:
+	rts
+
+_lab_CA54:
+	lea (BUF_LEVEL_TILES).l, A2
+	mulu.w #0x40, D2
+	add.w D2, D1
+	move.b #1, (A2,D1.w)
+	cmpi.b #0, D3
+	bne.w _lab_CA74
+	move.b #0, (A2,D1.w)
+_lab_CA74:
+	addq.w #1, D1
+	move.b #1, (A2,D1.w)
+	cmpi.b #0, D3
+	bne.w _lab_CA8A
+	move.b #0, (A2,D1.w)
+_lab_CA8A:
+	addi.w #0x3F, D1
+	move.b D3, (A2,D1.w)
+	addq.w #1, D1
+	move.b D3, (A2,D1.w)
+	rts
+
+_lab_CA9A:
+	clr.l D2
+	move.w D1, D2
+	divu.w #0x64, D2
+	move.w #0x90, 0xFF7000
+	move.w #0x96, 0xFF7002
+	addi.w #0x19, D2
+	move.w D2, 0xFF7004
+	clr.l D2
+	move.w D1, D2
+	divu.w #0xA, D2
+	andi.l #0xFFFF, D2
+	divu.w #0xA, D2
+	swap D2
+	move.w #0x98, 0xFF7020
+	move.w #0x96, 0xFF7022
+	addi.w #0x19, D2
+	move.w D2, 0xFF7024
+	clr.l D2
+	move.w D1, D2
+	divu.w #0xA, D2
+	swap D2
+	move.w #0xA0, 0xFF7040
+	move.w #0x96, 0xFF7042
+	addi.w #0x19, D2
+	move.w D2, 0xFF7044
+	rts
+
+_lab_CB10:
+	clr.l D2
+	move.w D1, D2
+	divu.w #0x64, D2
+	move.w #0x90, 0xFF7060
+	move.w #0xAA, 0xFF7062
+	addi.w #0x19, D2
+	move.w D2, 0xFF7064
+	clr.l D2
+	move.w D1, D2
+	divu.w #0xA, D2
+	andi.l #0xFFFF, D2
+	divu.w #0xA, D2
+	swap D2
+	move.w #0x98, 0xFF7080
+	move.w #0xAA, 0xFF7082
+	addi.w #0x19, D2
+	move.w D2, 0xFF7084
+	clr.l D2
+	move.w D1, D2
+	divu.w #0xA, D2
+	swap D2
+	move.w #0xA0, 0xFF70A0
+	move.w #0xAA, 0xFF70A2
+	addi.w #0x19, D2
+	move.w D2, 0xFF70A4
+	rts
+
+_lab_CB86:
+	cmpi.w #0xFF, 0xFF714A
+	beq.w _lab_CCA2
+	cmpi.w #10, 0xFF7148
+	bne.w _lab_CBA8
+	jsr (_lab_CE42).l
+	bra.w _lab_CCA2
+_lab_CBA8:
+	cmpi.w #1, 0xFF714C
+	beq.w _lab_CBC2
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_CCA2
+_lab_CBC2:
+	cmpi.w #0, PLR_SPRITE
+	beq.w _lab_CCA2
+	move.w #0, 0xFF714C
+	cmpi.w #1, PLAYER_SWIM
+	beq.w _lab_CBFE
+	lea (_lab_CD0A).l, A2
+	cmpi.w #1, PLAYER_SIZE
+	bne.w _lab_CC16
+	lea (_lab_CCA4).l, A2
+	bra.w _lab_CC16
+_lab_CBFE:
+	lea (_lab_CDA2).l, A2
+	cmpi.w #1, PLAYER_SIZE
+	bne.w _lab_CC16
+	lea (_lab_CD70).l, A2
+_lab_CC16:
+	move.w 0xFF7148, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w 0xFF714A, D1
+	mulu.w #2, D1
+	move.w (A2,D1.w), D2
+	move.w D2, PLR_SPRITE
+	move.w 0xFF714E, D3
+	mulu.w #0xC, D3
+	add.w D3, PLR_SPRITE
+	move.w 0x2(A2,D1.w), D2
+	cmpi.w #0x777, D2
+	beq.w _lab_CC86
+	cmpi.w #0x888, D2
+	beq.w _lab_CC7A
+	cmpi.w #0xFFF, D2
+	beq.w _lab_CC6E
+	addq.w #1, 0xFF714A
+	bra.w _lab_CCA2
+_lab_CC6E:
+	move.w #0, 0xFF714A
+	bra.w _lab_CCA2
+_lab_CC7A:
+	move.w #0xFF, 0xFF714A
+	bra.w _lab_CCA2
+_lab_CC86:
+	move.w #0, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	bra.w _lab_CCA2
+_lab_CCA2:
+	rts
+
+_lab_CCA4:
+	.long _lab_CCD0
+	.long _lab_CCD4
+	.long _lab_CCDE
+	.long _lab_CCE2
+	.long _lab_CCE6
+	.long _lab_CCEA
+	.long _lab_CCEE
+	.long _lab_CCF4
+	.long _lab_CCFA
+	.long _lab_CD00
+	.long _lab_CD04
+
+_lab_CCD0:
+	.word 0x0001
+	.word 0x0888
+_lab_CCD4:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0002
+	.word 0x0FFF
+_lab_CCDE:
+	.word 0x0004
+	.word 0x0888
+_lab_CCE2:
+	.word 0x0005
+	.word 0x0888
+_lab_CCE6:
+	.word 0x0006
+	.word 0x0888
+_lab_CCEA:
+	.word 0x0007
+	.word 0x0888
+_lab_CCEE:
+	.word 0x0008
+	.word 0x0008
+	.word 0x0777
+_lab_CCF4:
+	.word 0x0009
+	.word 0x000A
+	.word 0x0FFF
+_lab_CCFA:
+	.word 0x000B
+	.word 0x000C
+	.word 0x0FFF
+_lab_CD00:
+	.word 0x0001
+	.word 0x0FFF
+_lab_CD04:
+	.word 0x0024
+	.word 0x002F
+	.word 0x0FFF
+
+_lab_CD0A:
+	.long _lab_CD36
+	.long _lab_CD3A
+	.long _lab_CD44
+	.long _lab_CD48
+	.long _lab_CD4C
+	.long _lab_CD50
+	.long _lab_CD54
+	.long _lab_CD58
+	.long _lab_CD5E
+	.long _lab_CD66
+	.long _lab_CD6A
+
+_lab_CD36:
+	.word 0x0024
+	.word 0x0888
+_lab_CD3A:
+	.word 0x0024
+	.word 0x0025
+	.word 0x0026
+	.word 0x0025
+	.word 0x0FFF
+_lab_CD44:
+	.word 0x0027
+	.word 0x0888
+_lab_CD48:
+	.word 0x0024
+	.word 0x0888
+_lab_CD4C:
+	.word 0x0029
+	.word 0x0888
+_lab_CD50:
+	.word 0x002B
+	.word 0x0888
+_lab_CD54:
+	.word 0x0024
+	.word 0x0888
+_lab_CD58:
+	.word 0x002A
+	.word 0x002B
+	.word 0x0FFF
+_lab_CD5E:
+	.word 0x002C
+	.word 0x002D
+	.word 0x002E
+	.word 0x0FFF
+_lab_CD66:
+	.word 0x0028
+	.word 0x0888
+_lab_CD6A:
+	.word 0x0024
+	.word 0x002F
+	.word 0x0FFF
+
+_lab_CD70:
+	.long _lab_CCD0
+	.long _lab_CCD4
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD9C
+	.long _lab_CD6A
+
+_lab_CD9C:
+	.word 0x000B
+	.word 0x000C
+	.word 0x0FFF
+
+_lab_CDA2:
+	.long _lab_CD36
+	.long _lab_CD3A
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CDCE
+	.long _lab_CD66
+	.long _lab_CD6A
+
+_lab_CDCE:
+	.word 0x002D
+	.word 0x002E
+	.word 0x0FFF
+
+_lab_CDD4:
+	move.w GLOBAL_TIMER, D1
+	andi.w #3, D1
+	bne.w _lab_CE40
+	cmpi.b #1, PLR_FLASH
+	bne.w _lab_CE40
+	cmpi.w #0, PLR_SPRITE
+	beq.w _lab_CE36
+	addq.b #1, PLR_FLASH_COUNTER
+	cmpi.b #0x10, PLR_FLASH_COUNTER
+	blt.w _lab_CE20
+	move.b #0, PLR_FLASH
+	move.b #0, PLR_FLASH_COUNTER
+	bra.w _lab_CE36
+_lab_CE20:
+	move.w PLR_SPRITE, PLAYER_FLASHING_SPRITE
+	move.w #0, PLR_SPRITE
+	bra.w _lab_CE40
+_lab_CE36:
+	move.w PLAYER_FLASHING_SPRITE, PLR_SPRITE
+_lab_CE40:
+	rts
+
+_lab_CE42:
+	cmpi.w #0, PLAYER_SIZE
+	beq.w _lab_CE6A
+	move.w #0, PLAYER_SIZE
+	move.b #1, PLR_FLASH
+	move.b #0, PLR_FIERY
+	bra.w _lab_CE78
+_lab_CE6A:
+	move.w #1, PLAYER_SIZE
+	subq.w #8, PLR_POS_Y
+_lab_CE78:
+	lea (gfx_mario).l, A2
+	cmpi.w #0, PLAYER_SIZE
+	beq.w _lab_CE90
+	lea (gfx_mario_tall).l, A2
+_lab_CE90:
+	move.l #0x40000000, D4
+	move.w #0x330, D0
+	jsr (copyto_vdp_mem).l
+	move.w #0, 0xFF7154
+	move.w #0, 0xFF7156
+	move.w #0, 0xFF7148
+	move.w #0, 0xFF714A
+	move.w #1, 0xFF714C
+	rts
+
+_lab_CECA:
+	cmpi.w #1, DO_SCROLLING
+	bne.w _lab_CF1A
+	cmpi.w #1, SCROLL_LOCK
+	beq.w _lab_CF1A
+	move.w #0xD, D2
+_lab_CEE6:
+	move.w D2, D0
+	mulu.w #0x20, D0
+	cmpi.w #0, 0x4(A6,D0.w)
+	beq.w _lab_CF12
+	move.w ENTITY_DRIFT, D3
+	sub.w D3, (A6,D0.w)
+	cmpi.w #0x50, (A6,D0.w)
+	bgt.w _lab_CF12
+	move.w D0, D1
+	jsr (_lab_CF24).l
+_lab_CF12:
+	addq.w #1, D2
+	cmpi.w #0x33, D2
+	ble.b _lab_CEE6
+_lab_CF1A:
+	move.w #0, ENTITY_DRIFT
+	rts
+
+_lab_CF24:
+	movem.l D1/D2/A6, -(A7)
+	lea (ENTITIES).l, A6
+	move.w #0xF, D2
+_lab_CF32:
+	move.w #0, (A6,D1.w)
+	addq.w #2, D1
+	dbf D2, _lab_CF32
+	movem.l (A7)+, D1/D2/A6
+	rts
+
+_lab_CF44:
+	cmpi.w #0x11, CURR_LEVEL ; 4-4
+	bne.w _lab_CFBC
+	cmpi.w #1, LOOP_COMMAND
+	beq.w _lab_CF6C
+	cmpi.w #2, LOOP_COMMAND
+	beq.w _lab_CF94
+	bra.w _lab_D03C
+_lab_CF6C:
+	cmpi.w #5, NEXT_SCREEN_LOAD
+	bne.w _lab_D03C
+	move.w #0, SCREENS_CROSSED
+	move.w #1, NEXT_SCREEN_LOAD
+	move.w #0, ENTITY_INDEX
+	bra.w _lab_D03C
+_lab_CF94:
+	cmpi.w #9, NEXT_SCREEN_LOAD
+	bne.w _lab_D03C
+	move.w #4, SCREENS_CROSSED
+	move.w #5, NEXT_SCREEN_LOAD
+	move.w #2, ENTITY_INDEX
+	bra.w _lab_D03C
+_lab_CFBC:
+	cmpi.w #0x1D, CURR_LEVEL ; 7-4
+	bne.w _lab_D03C
+	cmpi.w #1, LOOP_COMMAND
+	beq.w _lab_CFE4
+	cmpi.w #2, LOOP_COMMAND
+	beq.w _lab_D00C
+	bra.w _lab_D03C
+_lab_CFE4:
+	cmpi.w #6, NEXT_SCREEN_LOAD
+	bne.w _lab_D03C
+	move.w #1, SCREENS_CROSSED
+	move.w #2, NEXT_SCREEN_LOAD
+	move.w #0, LOOP_COMMAND
+	bra.w _lab_D03C
+_lab_D00C:
+	cmpi.w #10, NEXT_SCREEN_LOAD
+	bne.w _lab_D03C
+	move.w #5, SCREENS_CROSSED
+	move.w #6, NEXT_SCREEN_LOAD
+	move.w #3, ENTITY_INDEX
+	move.w #0, LOOP_COMMAND
+	bra.w _lab_D03C
+_lab_D03C:
+	rts
+
+update_scrolling:
+	cmpi.w #1, DO_SCROLLING
+	bne.w _lab_D2E2
+	cmpi.w #1, SCROLL_LOCK
+	beq.w _lab_D2E2
+	move.w SCROLL_OFFSET, D1
+	cmpi.w #0x100, D1
+	blt.w _lab_D2AA
+	subi.w #0x100, SCROLL_OFFSET
+	addq.w #1, SCREENS_CROSSED
+	lea (level_page_markers).l, A2
+	move.w CURR_LEVEL, D3
+	mulu.w #4, D3
+	movea.l (A2,D3.w), A2
+	move.w SCREENS_CROSSED, D3
+	mulu.w #2, D3
+	move.w (A2,D3.w), NEXT_SCREEN_LOAD
+	cmpi.w #0x4, CURR_LEVEL ; 1-4
+	beq.w _lab_D138
+	cmpi.w #0x9, CURR_LEVEL ; 2-4
+	beq.w _lab_D138
+	cmpi.w #0xD, CURR_LEVEL ; 3-4
+	beq.w _lab_D138
+	cmpi.w #0x11, CURR_LEVEL ; 4-4
+	beq.w _lab_D15C
+	cmpi.w #0x15, CURR_LEVEL ; 5-4
+	beq.w _lab_D138
+	cmpi.w #0x19, CURR_LEVEL ; 6-4
+	beq.w _lab_D138
+	cmpi.w #0x25, CURR_LEVEL ; 8-4 last room
+	beq.w _lab_D118
+	cmpi.w #0x1D, CURR_LEVEL ; 7-4
+	beq.w _lab_D15C
+	bra.w _lab_D16C
+_lab_D0FC:
+	cmpi.w #0x11, CURR_LEVEL ; 4-4
+	bne.w _lab_D128
+	cmpi.w #11, NEXT_SCREEN_LOAD
+	bne.w _lab_D16C
+	bra.w _lab_D144
+_lab_D118:
+	cmpi.w #3, NEXT_SCREEN_LOAD
+	bne.w _lab_D16C
+	bra.w _lab_D144
+_lab_D128:
+	cmpi.w #13, NEXT_SCREEN_LOAD
+	bne.w _lab_D16C
+	bra.w _lab_D144
+_lab_D138:
+	cmpi.w #9, NEXT_SCREEN_LOAD
+	bne.w _lab_D16C
+_lab_D144:
+	cmpi.w #1, FIGHT_STAGE
+	beq.w _lab_D16C
+	move.w #1, SCROLL_LOCK
+	bra.w _lab_D1FC
+_lab_D15C:
+	cmpi.w #0, LOOP_COMMAND
+	beq.b _lab_D0FC
+	jsr (_lab_CF44).l
+_lab_D16C:
+	cmpi.w #0x8888, NEXT_SCREEN_LOAD
+	bne.w _lab_D1FC
+	cmpi.w #0x21, CURR_LEVEL ; 8-4 room 1
+	beq.w _lab_D1A8
+	cmpi.w #0x22, CURR_LEVEL ; 8-4 room 2
+	beq.w _lab_D1C4
+	cmpi.w #0x23, CURR_LEVEL ; 8-4 room 3
+	beq.w _lab_D1E0
+	move.w #1, SCROLL_LOCK
+	bra.w _lab_D2E2
+_lab_D1A8:
+	move.w #2, NEXT_SCREEN_LOAD
+	move.w #1, SCREENS_CROSSED
+	move.w #1, ENTITY_INDEX
+	bra.w _lab_D1FC
+_lab_D1C4:
+	move.w #2, NEXT_SCREEN_LOAD
+	move.w #1, SCREENS_CROSSED
+	move.w #4, ENTITY_INDEX
+	bra.w _lab_D1FC
+_lab_D1E0:
+	move.w #1, NEXT_SCREEN_LOAD
+	move.w #0, SCREENS_CROSSED
+	move.w #0, ENTITY_INDEX
+	bra.w _lab_D1FC
+_lab_D1FC:
+	lea (tilemaps).l, A4
+	move.w CURR_LEVEL, D1
+	mulu #4, D1
+	movea.l (A4,D1.w), A4
+	move.w NEXT_SCREEN_LOAD, D1
+	mulu.w #4, D1
+	movea.l (A4,D1.w), A4
+	move.w #0x1F, D1
+	move.w #0x1B, D2
+	cmpi.w #0, SCREEN_PARITY
+	beq.w _lab_D244
+	move.l #0x60400002, D4
+	move.w #0, SCREEN_PARITY
+	bra.w _lab_D252
+_lab_D244:
+	move.w #1, SCREEN_PARITY
+	move.l #0x60000002, D4
+_lab_D252:
+	jsr (copyto_vram).l
+	lea (leveltiles).l, A2
+	move.w CURR_LEVEL, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	move.w NEXT_SCREEN_LOAD, D1
+	mulu.w #4, D1
+	movea.l (A2,D1.w), A2
+	lea (BUF_LEVEL_TILES).l, A3
+	cmpi.w #1, SCREEN_PARITY
+	beq.w _lab_D292
+	adda.l #0x20, A3
+_lab_D292:
+	move.w #0x1D, D2
+_lab_D296:
+	move.w #0x1F, D1
+_lab_D29A:
+	move.b (A2)+, (A3)+
+	dbf D1, _lab_D29A
+	adda.l #0x20, A3
+	dbf D2, _lab_D296
+_lab_D2AA:
+	move.l #0x78000003, (A1)
+	move.w #0, D1
+	move.w SCREENS_CROSSED, D2
+	mulu.w #0x100, D2
+	add.w SCROLL_OFFSET, D2
+	sub.w D2, D1
+	move.w D1, (A0)
+	move.l #0x78020003, (A1)
+	move.w #0, D1
+	sub.w BACKDROP_SCROLL, D1
+	move.w D1, (A0)
+	move.w #0, DO_SCROLLING
+_lab_D2E2:
+	rts
+
+level_page_markers:
+	.long markers_11
+	.long markers_12
+	.long markers_11bonus
+	.long markers_13
+	.long markers_14
+	.long markers_12bonus
+	.long markers_21
+	.long markers_22
+	.long markers_23
+	.long markers_24
+	.long markers_31
+	.long markers_32
+	.long markers_33
+	.long markers_34
+	.long markers_41
+	.long markers_42
+	.long markers_43
+	.long markers_44
+	.long markers_51
+	.long markers_52
+	.long markers_53
+	.long markers_54
+	.long markers_61
+	.long markers_62
+	.long markers_63
+	.long markers_64
+	.long markers_71
+	.long markers_72
+	.long markers_73
+	.long markers_74
+	.long markers_81
+	.long markers_82
+	.long markers_83
+	.long markers_841
+	.long markers_842
+	.long markers_843
+	.long markers_844
+	.long markers_845
+
+markers_11:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x8888
+
+markers_12:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x8888
+
+markers_11bonus:
+	.word 0x8888
+
+markers_13:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_14:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_12bonus:
+	.word 0x8888
+
+markers_21:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_22:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x8888
+
+markers_23:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x000E
+	.word 0x8888
+
+markers_24:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_31:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_32:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_33:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_34:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_41:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x000E
+	.word 0x8888
+
+markers_42:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_43:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_44:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x8888
+
+markers_51:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x8888
+
+markers_52:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_53:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x8888
+
+markers_54:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_61:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x8888
+
+markers_62:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x000E
+	.word 0x8888
+
+markers_63:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x8888
+
+markers_64:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x8888
+
+markers_71:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x8888
+
+markers_72:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x8888
+
+markers_73:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x000E
+	.word 0x8888
+
+markers_74:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_81:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x000E
+	.word 0x000F
+	.word 0x0010
+	.word 0x0011
+	.word 0x0012
+	.word 0x0013
+	.word 0x0014
+	.word 0x0015
+	.word 0x0016
+	.word 0x8888
+
+markers_82:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_83:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x0006
+	.word 0x0007
+	.word 0x0008
+	.word 0x0009
+	.word 0x000A
+	.word 0x000B
+	.word 0x000C
+	.word 0x000D
+	.word 0x8888
+
+markers_841:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x0005
+	.word 0x8888
+
+markers_842:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x8888
+
+markers_843:
+	.word 0x0001
+	.word 0x0002
+	.word 0x8888
+
+markers_844:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x0004
+	.word 0x8888
+
+markers_845:
+	.word 0x0001
+	.word 0x0002
+	.word 0x0003
+	.word 0x8888
+
+_lab_D6C4:
+	movem.l D5-D7, -(A7)
+	move.l D4, (A1)
+	clr.l D4
+	move.b (A4)+, D6
+_lab_D6CE:
+	cmp.b (A4), D6
+	bne.w _lab_D710
+	cmpi.b #0, 0x1(A4)
+	beq.w _lab_D732
+	clr.l D7
+	move.b 0x1(A4), D7
+	subq.w #1, D7
+_lab_D6E6:
+	cmpi.w #0, D4
+	beq.w _lab_D6FC
+	move.w #0, D4
+	move.b 0x2(A4), D5
+	move.w D5, (A0)
+	bra.w _lab_D708
+_lab_D6FC:
+	move.w #1, D4
+	move.b 0x2(A4), D5
+	mulu.w #0x100, D5
+_lab_D708:
+	dbf D7, _lab_D6E6
+	addq.l #3, A4
+	bra.b _lab_D6CE
+_lab_D710:
+	cmpi.w #0, D4
+	beq.w _lab_D724
+	move.w #0, D4
+	move.b (A4), D5
+	move.w D5, (A0)
+	bra.w _lab_D72E
+_lab_D724:
+	move.w #1, D4
+	move.b (A4), D5
+	mulu.w #0x100, D5
+_lab_D72E:
+	addq.l #1, A4
+	bra.b _lab_D6CE
+_lab_D732:
+	movem.l (A7)+, D5-D7
+	rts
+
+load_palette:
+	movem.l D0, -(A7)
+	move.w #0x8134, 0x4(A0)     ; disable rendering
+	move.w #0x8F02, 0x4(A0)     ; set auto-increment to 2
+	move.l #0x40000000, 0x4(A0) ; write to vram
+	move.w #0x27F7, D0          ; we have enough memory! we don't care about copying too much /j
+1:	move.l (A2)+, (A0)
+	dbf D0, 1b
+	
+	jsr (_lab_D9E8).l
+	move.l #0xC0000000, 0x4(A0)
+	lea (BUF_PAL_FADE_IN).l, A2
+	lea (BUF_PAL_FADE_OUT).l, A4
+	moveq #0x3F, D0
+2:	move.w #0, (A0)     ; clear CRAM
+	move.w #0, (A2)+    ; clear fade in buffer
+	move.w (A3)+, (A4)+ ; copy palette to other buffer
+	dbf D0, 2b
+	
+	movem.l (A7)+, D0
+	rts
+
+clear_ram:
+	lea (0xFF0000).l, A2
+	clr.l D0
+	move.w #0x1FFF, D0   ; only clear the first half, we don't need the rest
+1:	move.l #0, (A2)+
+	dbf D0, 1b
+	rts
+
+do_palette_fadein:
+	movem.l D0-A6, -(A7)
+	
+	jsr (wait_5_frames).l ; erm... I don't think that's needed
+	
+	moveq #7, D3    ; 8 steps
+1:	moveq #0x3F, D2 ; 64 palette entries
+	lea (BUF_PAL_FADE_IN).l, A2  ; this is the buffer that will be copied to CRAM
+	lea (BUF_PAL_FADE_OUT).l, A3 ; and this is the one containing the colors we want to fade to
+	
+2:	move.w #0xF, D4   ; red channel mask
+	move.w #0x2, D5
+	jsr (color_add_channel).l
+	move.w #0xF0, D4  ; green channel mask
+	move.w #0x20, D5
+	jsr (color_add_channel).l
+	move.w #0xF00, D4 ; blue channel mask
+	move.w #0x200, D5
+	jsr (color_add_channel).l
+	addq.w #2, A2     ; move on to the next color entry
+	addq.w #2, A3
+	
+	dbf D2, 2b
+	jsr (wait_5_frames).l         
+	move.l #0xC0000000, (A1)    ; write to CRAM
+	lea (BUF_PAL_FADE_IN).l, A2 ; set A2 back to the start of the buffer
+	moveq #0x3F, D0             ; 64 palette entries
+3:	move.w (A2)+, (A0)          ; copy the data to CRAM
+	dbf D0, 3b
+	
+	dbf D3, 1b ; keep stepping until it's fully faded in
+	
+	movem.l (A7)+, D0-A6
+	rts
+
+color_add_channel:
+	move.w (A2), D0 ; get the original color
+	move.w (A3), D1 ; get the new color
+	and.w D4, D0    ; keep the selected channel
+	and.w D4, D1
+	cmp.w D1, D0
+	beq.w 2f        ; if they're the same, don't add to prevent overflow
+	bhi.w 1f        ; if D0 is somehow higher than D1, fix it
+	add.w D5, D0    ; make the color brigher
+	bra.w 2f
+1:	sub.w D5, D0
+2:	move.w D0, D1   ; save new bits
+	move.w (A2), D0
+	not.w D4        ; invert bits
+	and.w D4, D0    ; then clear the bits of the selected channel on the original value
+	or.w D1, D0     ; and change them to the new bits saved in D1
+	move.w D0, (A2) ; replace the color
+	rts
+
+do_palette_fadeout:
+	movem.l D0-A6, -(A7)
+	moveq #7, D3    ; 8 steps
+1:	moveq #0x3F, D2 ; 64 palette entries
+	lea (BUF_PAL_FADE_OUT).l, A2
+	
+2:	move.w #0xF, D4   ; red channel mask
+	move.w #0x2, D5
+	jsr (color_sub_channel).l
+	move.w #0xF0, D4  ; green channel mask
+	move.w #0x20, D5
+	jsr (color_sub_channel).l
+	move.w #0xF00, D4 ; blue channel mask
+	move.w #0x200, D5
+	jsr (color_sub_channel).l
+	addq.w #2, A2     ; move on to the next color entry
+	dbf D2, 2b
+	
+	jsr (wait_5_frames).l
+	move.l #0xC0000000, (A1)     ; write to CRAM
+	lea (BUF_PAL_FADE_OUT).l, A2 ; set A2 back to the start of the buffer
+	moveq #0x3F, D0              ; 64 palette entries
+3:	move.w (A2)+, (A0)           ; copy the data to CRAM
+	dbf D0, 3b
+	
+	dbf D3, 1b ; keep stepping until it's fully black
+	
+	movem.l (A7)+, D0-A6
+	rts
+
+color_sub_channel:
+	move.w (A2), D0 ; get the color
+	and.w D4, D0    ; keep the selected channel
+	cmpi.w #0, D0   ; if zero, don't subtract to prevent underflow
+	beq.w 1f
+	sub.w D5, D0    ; subtract for a darker color
+1:	move.w D0, D1   ; save new bits
+	move.w (A2), D0
+	not.w D4        ; invert bits
+	and.w D4, D0    ; then clear the bits of the selected channel on the original value
+	or.w D1, D0     ; and change them to the new bits saved in D1
+	move.w D0, (A2) ; replace the color
+	rts
+
+copyto_layerA:
+	move.l #0x60000002, D4
+	bra.w _lab_D97A
+copyto_layerB:
+	move.l #0x40000003, D4
+	bra.w _lab_D97A
+copyto_layerW:
+	move.l #0x50000003, D4
+	bra.w _lab_D97A
+copyto_vram:
+	bra.w _lab_D97A
+_lab_D8DA:
+	move.w D1, D3
+	move.l D4, 0x4(A0)
+_lab_D8E0:
+	move.w (A4), D0
+	andi.w #0x7FF, D0
+	cmpi.w #0x5FF, D0
+	bls.w _lab_D918
+	subi.w #0x600, D0
+	subq.w #1, D0
+	addq.l #2, A4
+_lab_D8F6:
+	move.w (A4), (A0)
+	dbf D3, _lab_D910
+	addi.l #0x800000, D4
+	move.w D1, D3
+	move.l D4, 0x4(A0)
+	dbf D2, _lab_D910
+	bra.w _lab_D928
+_lab_D910:
+	dbf D0, _lab_D8F6
+	addq.l #2, A4
+	bra.b _lab_D8E0
+_lab_D918:
+	move.w (A4)+, (A0)
+	dbf D3, _lab_D8E0
+	addi.l #0x800000, D4
+	dbf D2, _lab_D8DA
+_lab_D928:
+	movem.l (A7)+, D0-D4
+	rts
+
+_lab_D92E:
+	movem.l D3-D6, -(A7)
+	move.w D1, D5
+	move.l D4, (A1)
+_lab_D936:
+	move.w (A4)+, D3
+	cmpi.w #0xFFFF, D3
+	beq.w _lab_D948
+	move.w #0, D6
+	bra.w _lab_D956
+_lab_D948:
+	move.w (A4)+, D6
+	cmpi.w #0, D6
+	beq.w _lab_D974
+	subq.w #1, D6
+	move.w (A4)+, D3
+_lab_D956:
+	move.w D3, (A0)
+	dbf D5, _lab_D96E
+	move.w D1, D5
+	addi.l #0x400000, D4
+	dbf D2, _lab_D96C
+	bra.w _lab_D974
+_lab_D96C:
+	move.l D4, (A1)
+_lab_D96E:
+	dbf D6, _lab_D956
+	bra.b _lab_D936
+_lab_D974:
+	movem.l (A7)+, D3-D6
+	rts
+
+_lab_D97A:
+	movem.l D3-D6, -(A7)
+	move.w D1, D5
+	move.l D4, (A1)
+_lab_D982:
+	move.w (A4)+, D3
+	cmpi.w #0xFFFF, D3
+	beq.w _lab_D994
+	move.w #0, D6
+	bra.w _lab_D9A2
+_lab_D994:
+	move.w (A4)+, D6
+	cmpi.w #0, D6
+	beq.w _lab_D9C0
+	subq.w #1, D6
+	move.w (A4)+, D3
+_lab_D9A2:
+	move.w D3, (A0)
+	dbf D5, _lab_D9BA
+	move.w D1, D5
+	addi.l #0x800000, D4
+	dbf D2, _lab_D9B8
+	bra.w _lab_D9C0
+_lab_D9B8:
+	move.l D4, (A1)
+_lab_D9BA:
+	dbf D6, _lab_D9A2
+	bra.b _lab_D982
+_lab_D9C0:
+	movem.l (A7)+, D3-D6
+	rts
+
+wait_next_vblank:
+	movem.l D0, -(A7)
+	
+1:	move.w vdp_ctrl_port, D0
+	btst.l #3, D0            ; if we currently are in a vblank,
+	bne.b 1b                 ;  wait until we exit blanking.
+	
+2:	move.w vdp_ctrl_port, D0
+	btst.l #3, D0
+	beq.b 2b                 ; now wait until the next vblank starts
+	
+	movem.l (A7)+, D0
+	rts
+
+_lab_D9E8:
+	movem.l D0, -(A7)
+	move.w #0x100, D0
+1:	nop
+	dbf D0, 1b
+	movem.l (A7)+, D0
+	rts
+
+_lab_D9FC:
+	movem.l D0, -(A7)
+	move.w #0xA0, D0
+1:	nop
+	dbf D0, 1b
+	movem.l (A7)+, D0
+	rts
+
+_lab_DA10:
+	movem.l D0, -(A7)
+	move.w #0xA0, D0
+1:	jsr (_lab_D9E8).l
+	dbf D0, 1b
+	movem.l (A7)+, D0
+	rts
+
+wait_5_frames:
+	movem.l D0, -(A7)
+	
+	move.w #4, D0
+1:	jsr (wait_next_vblank).l
+	dbf D0, 1b
+	
+	movem.l (A7)+, D0
+	rts
+
+controller_set_TH:
+	move.l D0, -(A7)
+	moveq #0x40, D0
+	move.b D0, reg_control1
+	move.b D0, reg_control2
+	move.b D0, reg_control3
+	move.l (A7)+, D0
+	rts
+
+read_controlpads:
+	jsr (read_cont_1).l
+	jsr (read_cont_2).l
+	
+	cmpi.w #1, TITLE_DEMO_PLAYBACK ; are we playing a demo?
+	bne.w 3f                       ; in which case, exit
+	cmpi.w #0, TITLE_DEMO_MODE     ; are we in player gameplay mode?
+	beq.w 3f                       ; in which case, we've read their controller input, exit
+	
+	btst.b #CONT_BUTTON_START, P1_BUTTONS_PRESSED ; if START is pressed, exit demo
+	bne.w 1f
+	
+	lea (demos).l, A3
+	move.w TITLE_DEMO_CURRENT, D0
+	subq.w #1, D0
+	mulu.w #4, D0
+	movea.l (A3,D0.w), A3
+	move.w TITLE_DEMO_TIMER, D0 ; get offset for the current frame controller data
+	cmpi.b #0xFF, (A3,D0.w)     ; if we've reached the end, exit demo
+	bne.w 2f                    ; otherwise branch
+	
+1:	move.w #1, TITLE_DEMO_STOP
+	move.w #1, TRANSITION_CONTROL
+	bra.w 3f
+	
+2:	move.w (A3,D0.w), P1_BUTTONS_HELD       ; get button data for the current frame
+	move.w 0x2(A3,D0.w), P1_BUTTONS_PRESSED
+	
+	addq.w #4, TITLE_DEMO_TIMER             ; advance offset for next frame
+	bra.w 3f
+	
+3:	rts
+
+read_cont_1:
+	movem.l D0/D1/A5/A6, -(A7)
+	move.w #0x100, z80_req     ; pause the zilog to access control pad ports
+	lea (reg_data1).l, A6      ; which port we'll read from
+	lea (P1_BUTTONS_HELD), A5  ; where we'll save the bits
+	bra.w 1f
+	
+read_cont_2:
+	movem.l D0/D1/A5/A6, -(A7)
+	move.w #0x100, z80_req     ; pause the zilog to access control pad ports
+	lea (reg_data2).l, A6      ; which port we'll read from
+	lea (P2_BUTTONS_HELD), A5  ; where we'll save the bits
+	
+1:	move.b #0x80, (A6) ; set TH low
+	nop
+	nop
+	move.b (A6), D0    ; read bits for START and A buttons
+	lsl.b #2, D0       ; shift them to the left
+	andi.b #0xC0, D0   ; and only keep these two bits
+	
+	move.b #0xC0, (A6) ; set TH high
+	nop
+	nop
+	move.b (A6), D1    ; read the rest of the buttons
+	andi.b #0x3F, D1   ; keep their bits
+	or.b D1, D0        ; combine D0 and D1, now D0 holds all bits!
+	
+	not.b D0           ; invert them such that when a bit is: 1 = pressed, 0 = released
+	move.b (A5), D1    ; check which buttons were pressed on the previous frame
+	move.b D0, (A5)+   ; save the buttons pressed on this frame
+	move.b D1, (A5)+   ; save the buttons pressed on the previous frame
+	
+	eor.b D0, D1       ; mask the buttons that were already pressed, they are now "held"
+	and.b D0, D1
+	
+	move.b D1, (A5)+   ; the buttons that are newly pressed are saved
+	
+	move.w #0x0, z80_req       ; free the zilog
+	movem.l (A7)+, D0/D1/A5/A6
+	rts
+
+clear_one_screen:
+	movem.l D0-D4, -(A7)
+	bra.w 1f ; erm... ok
+	
+1:	move.w D1, D3
+	move.l D4, 0x4(A0)
+	
+2:	move.w #0, (A0)
+	dbf D3, 2b
+	adda.l #0x20, A4     ; increment A4 by 0x20 even though we don't need it??
+	addi.l #0x800000, D4 ; add 0x80 to the VRAM address, we don't clear the part we never get to see anyway.
+	dbf D2, 1b
+	
+	movem.l (A7)+, D0-D4
+	rts
+
+clear_vram_layerA:
+	movem.l D0, -(A7)
+	move.l #0x60000002, (A1)
+	bra.w 1f
+clear_vram_layerB:
+	movem.l D0, -(A7)
+	move.l #0x40000003, (A1)
+	bra.w 1f
+clear_vram_layerW:
+	movem.l D0, -(A7)
+	move.l #0x50000003, (A1)
+1:	move.l #0x3FF, D0
+2:	move.l #0, (A0)
+	dbf D0, 2b
+	movem.l (A7)+, D0
+	rts
+
+_lab_DBB8:
+	movem.l D0-D3, -(A7)
+	move.w #0x8134, 0x4(A0)
+	move.w #0x8F02, 0x4(A0)
+	move.l #0x7D800000, 0x4(A0)
+	move.w #0xE20, D0
+	bra.w _lab_DBF4
+_lab_DBD8:
+	movem.l D0-D3, -(A7)
+	move.w #0x8134, 0x4(A0)
+	move.w #0x8F02, 0x4(A0)
+	move.l #0x40000000, 0x4(A0)
+	move.w #0xAA00, D0
+_lab_DBF4:
+	clr.l D2
+	clr.l D3
+_lab_DBF8:
+	move.b (A2), D1
+	cmpi.b #0xDF, D1
+	bls.w _lab_DC20
+	subi.b #0xE1, D1
+	ext.w D1
+	addq.l #1, A2
+_lab_DC0A:
+	jsr (_lab_DC36).l
+	dbf D0, _lab_DC18
+	bra.w _lab_DC2C
+_lab_DC18:
+	dbf D1, _lab_DC0A
+	addq.l #1, A2
+	bra.b _lab_DBF8
+_lab_DC20:
+	jsr (_lab_DC36).l
+	addq.l #1, A2
+	dbf D0, _lab_DBF8
+_lab_DC2C:
+	move.w #0x8F02, 0x4(A0)
+	bra.w _lab_DC78
+_lab_DC36:
+	move.b (A2), D4
+	cmpi.w #0, D2
+	bne.w _lab_DC4C
+	move.b D4, D3
+	asl.w #8, D3
+	move.w #1, D2
+	bra.w _lab_DC58
+_lab_DC4C:
+	andi.w #0xFF, D4
+	add.w D4, D3
+	move.w D3, (A0)
+	move.w #0, D2
+_lab_DC58:
+	rts
+
+_lab_DC5A:
+	movem.l D0-D3, -(A7)
+	move.w #0x8134, 0x4(A0)
+	move.w #0x8F02, 0x4(A0)
+	move.l D4, 0x4(A0)
+	bra.w _lab_DC72
+_lab_DC72:
+	move.l (A2)+, (A0)
+	dbf D0, _lab_DC72
+_lab_DC78:
+	jsr (_lab_D9E8).l
+	move.l #0xC0000000, 0x4(A0)
+	lea (BUF_PAL_FADE_IN).l, A2
+	lea (BUF_PAL_FADE_OUT).l, A4
+	moveq #0x3F, D0
+_lab_DC94:
+	move.w #0, (A0)
+	move.w #0, (A2)+
+	move.w (A3)+, (A4)+
+	dbf D0, _lab_DC94
+	movem.l (A7)+, D0-D3
+	rts
+
+copyto_vdp_mem:
+	move.l D4, 0x4(A0) ; set address mode and memory location
+1:	move.l (A2)+, (A0) ; copy the data
+	dbf D0, 1b
+	rts
+
+; unused function
+_lab_DCB4:
+	movem.l D1-D3, -(A7)
+	move.w #0x8134, 0x4(A0)     ; disable rendering
+	move.w #0x8F02, 0x4(A0)     ; set auto-increment to 2
+	move.l #0x40000000, 0x4(A0) ; start of VRAM
+	move.w #0x1480, D0
+1:	move.l (A2)+, (A0)          ; copy data
+	dbf D0, 1b
+	movem.l (A7)+, D1-D3
+	rts
+
+; unused function
+_lab_DCDC:
+	movem.l D0-D3, -(A7)
+	move.l D4, (A1)      ; set address mode and memory location
+1:	move.l (A2)+, (A0)   ; copy the data
+	dbf D0, 1b
+	movem.l (A7)+, D0-D3
+	rts
+
+; unused function
+clear_vram:
+	movem.l D0, -(A7)
+	move.l #0x40000000, (A1) ; start of VRAM
+	move.l #0x3FFF, D0
+1:	move.l #0, (A0)
+	dbf D0, 1b
+	movem.l (A7)+, D0
+	rts
+
+vdp_regs_default:
+	.word 0x8014
+	.word 0x8134 ; disable rendering
+	.word 0x8230 ; layer A address (0xC000)
+	.word 0x8338 ; window address (0xE000)
+	.word 0x8405 ; layer B address (0xA000)
+	.word 0x8578 ; sprites table address (0xF000)
+	.word 0x8600
+	.word 0x8700
+	.word 0x8800
+	.word 0x8900
+	.word 0x8A00
+	.word 0x8B00
+	.word 0x8C00
+	.word 0x8D34 ; horizontal scrolling address (0xD000)
+	.word 0x8E00
+	.word 0x8F02 ; set auto-increment to 2
+	.word 0x9000
+	.word 0x9100
+	.word 0x9200
+
+; unused function
+copy_entity_list:
+	lea (ENTITIES).l, A2
+	ext.l D0
+	adda.l D0, A2
+	
+1:	cmpi.w #0xFFFF, (A3)    ; check if we've reached end of the list
+	beq.w 2f                ; in which case, exit
+	move.w (A3), (A2)       ; copy X position
+	move.w 0x2(A3), 0x2(A2) ; copy Y position
+	move.w 0x4(A3), 0x4(A2) ; copy sprite ID
+	adda.w #0x20, A2        ; next entity
+	adda.w #0x6, A3         ; next entry in list
+	bra.b 1b
+	
+2:	rts
+
+; unused function
+_lab_DD60:
+	lea (ENTITIES).l, A2
+	ext.l D0
+	adda.l D0, A2
+	
+1:	cmpi.w #0xFFFF, (A3)    ; check if we've reached end of the list
+	beq.w 2f                ; in which case, exit
+	move.w (A3), (A2)       ; copy X position
+	move.w 0x2(A3), 0x2(A2) ; copy Y position
+	move.w 0x4(A3), 0x4(A2) ; copy sprite ID
+	move.w 0x6(A3), 0xA(A2)
+	adda.w #0x20, A2        ; next entity
+	adda.w #0x8, A3         ; next entry in list
+	bra.b 1b
+	
+2:	rts
+
+; unused function
+_lab_DD92:
+	lea (ENTITIES).l, A2
+	ext.l D0
+	adda.l D0, A2
+	
+1:	cmpi.w #0xFFFF, (A3)    ; check if we've reached end of the list
+	beq.w 2f                ; in which case, exit
+	move.w (A3), (A2)       ; copy X position
+	move.w 0x2(A3), 0x2(A2) ; copy Y position
+	move.w 0x4(A3), 0x4(A2) ; copy sprite ID
+	move.w 0x6(A3), 0xE(A2)
+	adda.w #0x20, A2        ; next entity
+	adda.w #0x8, A3         ; next entry in list
+	bra.b 1b
+	
+2:	rts
+
+clear_entities:
+	lea (ENTITIES).l, A2
+	moveq #0x4F, D0
+1:	move.l #0, (A2)
+	move.l #0, 0x4(A2)
+	move.l #0, 0x8(A2)
+	move.l #0, 0xC(A2)
+	move.l #0, 0x10(A2)
+	move.l #0, 0x14(A2)
+	move.l #0, 0x18(A2)
+	move.l #0, 0x1C(A2)
+	adda.l #0x20, A2
+	dbf D0, 1b
+	rts
+
+_lab_DE16:
+	movem.l D0-A6, -(A7)
+	lea (ENTITIES).l, A2
+	clr.l D3
+	subq.w #1, 0xFF0000
+	move.w 0xFF0000, D0
+_lab_DE2E:
+	cmpi.w #0, 0x4(A2)
+	beq.w _lab_DE5A
+	lea (_lab_E026).l, A4
+	clr.l D1
+	move.w 0x4(A2), D1
+	subq.l #1, D1
+	asl.l #2, D1
+	adda.l D1, A4
+	movea.l (A4), A4
+	clr.l D2
+	move.b (A4), D2
+	ext.w D2
+	add.w 0x2(A2), D2
+	move.w D2, 0x6(A2)
+_lab_DE5A:
+	adda.l #0x20, A2
+	dbf D0, _lab_DE2E
+	moveq #1, D4
+	bra.w _lab_DE70
+
+render_sprites:
+	movem.l D0-A6, -(A7)
+	moveq #0, D4
+_lab_DE70:
+	lea (ENTITIES).l, A2
+	lea (0xFFF000).l, A3
+	moveq #0, D3
+	move.w #0x4F, D0
+	
+1:	cmpi.b #1, D4
+	beq.w _lab_DE98
+	cmpi.w #0, 0x4(A2)
+	beq.w _lab_DF70
+	bra.w _lab_DEDE
+_lab_DE98:
+	lea (ENTITIES).l, A5
+	clr.l D7
+	clr.l D6
+	move.w 0xFF0000, D5
+_lab_DEA8:
+	cmpi.w #0, 0x6(A5)
+	beq.w _lab_DEC4
+	cmp.w 0x6(A5), D6
+	bge.w _lab_DEC4
+	move.w 0x6(A5), D6
+	movea.l A5, A6
+	move.b #1, D7
+_lab_DEC4:
+	adda.l #0x20, A5
+	dbf D5, _lab_DEA8
+	cmpi.b #0, D7
+	beq.w _lab_DF4E
+	movea.l A6, A2
+	move.w #0, 0x6(A2)
+_lab_DEDE:
+	lea (_lab_E026), A4
+	clr.l D1
+	move.w 0x4(A2), D1
+	subq.l #1, D1
+	asl.l #2, D1
+	adda.l D1, A4
+	movea.l (A4), A4
+	addq.l #1, A4
+_lab_DEF4:
+	clr.l D1
+	move.b (A4), D1
+	ext.w D1
+	add.w (A2), D1
+	move.w D1, 0x6(A3)
+	clr.l D1
+	move.b 0x1(A4), D1
+	ext.w D1
+	add.w 0x2(A2), D1
+	move.w D1, (A3)
+	move.b 0x3(A4), 0x4(A3)
+	move.b 0x4(A4), 0x5(A3)
+	clr.l D2
+	move.b 0x2(A4), D1
+_lab_DF20:
+	subi.b #0x10, D1
+	cmpi.b #0x10, D1
+	blt.w _lab_DF30
+	addq.b #4, D2
+	bra.b _lab_DF20
+_lab_DF30:
+	subq.b #1, D1
+	add.b D1, D2
+	move.b D2, 0x2(A3)
+	addq.b #1, D3
+	move.b D3, 0x3(A3)
+	addq.l #8, A3
+	cmpi.b #0xFF, 0x5(A4)
+	beq.w _lab_DF70
+	addq.l #5, A4
+	bra.b _lab_DEF4
+_lab_DF4E:
+	move.b #0, D4
+	move.w #0x4F, D0
+	sub.w 0xFF0000, D0
+	clr.l D7
+	move.w 0xFF0000, D7
+	lea (ENTITIES).l, A2
+	mulu.w #0x20, D7
+	adda.l D7, A2
+_lab_DF70:
+	adda.l #0x20, A2
+	dbf D0, 1b
+	
+	cmpi.b #0, D3
+	bne.w _lab_DF9C
+	
+	move.w #0, (A3)
+	move.b #0, 0x2(A3)
+	move.w #0, 0x4(A3)
+	move.w #0, 0x6(A3)
+	bra.w _lab_DFA0
+_lab_DF9C:
+	subq.b #1, D3
+	subq.l #8, A3
+_lab_DFA0:
+	move.b D3, 0x3(A3)
+	jsr (_lab_DFB0).l
+	movem.l (A7)+, D0-A6
+	rts
+
+_lab_DFB0:
+	move SR, -(A7)
+	ori #0x700, SR
+	move.w #0x8F02, (A1)
+	move.w #0x9340, (A1)
+	move.w #0x9401, (A1)
+	move.w #0x9500, (A1)
+	move.w #0x9678, (A1)
+	move.w #0x977F, (A1)
+	move.l #0x70000083, (A1)
+_lab_DFD4:
+	move.w (A1), D0
+	andi.b #2, D0
+	bne.b _lab_DFD4
+	move (A7)+, SR
+	rts
+
+_lab_DFE0: ; unused function
+	clr.l D2
+	clr.l D3
+	subi.w #0x80, 0xFF002C
+	subi.w #0x80, 0xFF002E
+	move.w 0xFF002E, D2
+	lsr.w #3, D2
+	mulu.w #0x80, D2
+	move.w 0xFF002C, D3
+	lsr.w #3, D3
+	mulu.w #2, D3
+	add.w D2, D3
+	swap D3
+	ori.l #0x20000003, D3
+	andi.l #0x2FFFFFF3, D3
+	move.l D3, (A1)
+	move.w (A0), 0xFF0030
+	rts
+
+_lab_E026:
+	.long _lab_E44A
+	.long _lab_E452
+	.long _lab_E45A
+	.long _lab_E462
+	.long _lab_E46A
+	.long _lab_E472
+	.long _lab_E47A
+	.long _lab_E482
+	.long _lab_E48A
+	.long _lab_E492
+	.long _lab_E49A
+	.long _lab_E4A2
+	.long _lab_E4AA
+	.long _lab_E4B2
+	.long _lab_E4BA
+	.long _lab_E4C2
+	.long _lab_E4CA
+	.long _lab_E4D2
+	.long _lab_E4DA
+	.long _lab_E4E2
+	.long _lab_E4EA
+	.long _lab_E4F2
+	.long _lab_E4FA
+	.long _lab_E502
+	.long _lab_E50A
+	.long _lab_E512
+	.long _lab_E51A
+	.long _lab_E522
+	.long _lab_E52A
+	.long _lab_E532
+	.long _lab_E53A
+	.long _lab_E542
+	.long _lab_E54A
+	.long _lab_E552
+	.long _lab_E55A
+	.long _lab_E562
+	.long _lab_E56A
+	.long _lab_E572
+	.long _lab_E57A
+	.long _lab_E582
+	.long _lab_E58A
+	.long _lab_E592
+	.long _lab_E59A
+	.long _lab_E5A2
+	.long _lab_E5AA
+	.long _lab_E5B2
+	.long _lab_E5BA
+	.long _lab_E5C2
+	.long _lab_E5CA
+	.long _lab_E5D2
+	.long _lab_E5DA
+	.long _lab_E5E2
+	.long _lab_E5EA
+	.long _lab_E5F2
+	.long _lab_E5FA
+	.long _lab_E602
+	.long _lab_E60A
+	.long _lab_E612
+	.long _lab_E61A
+	.long _lab_E622
+	.long _lab_E62A
+	.long _lab_E632
+	.long _lab_E63A
+	.long _lab_E642
+	.long _lab_E64A
+	.long _lab_E652
+	.long _lab_E65A
+	.long _lab_E662
+	.long _lab_E66A
+	.long _lab_E672
+	.long _lab_E67A
+	.long _lab_E682
+	.long _lab_E68A
+	.long _lab_E692
+	.long _lab_E69A
+	.long _lab_E6A2
+	.long _lab_E6AA
+	.long _lab_E6B2
+	.long _lab_E6BA
+	.long _lab_E6C2
+	.long _lab_E6CA
+	.long _lab_E6D2
+	.long _lab_E6DA
+	.long _lab_E6E2
+	.long _lab_E6EA
+	.long _lab_E6F2
+	.long _lab_E6FA
+	.long _lab_E702
+	.long _lab_E70A
+	.long _lab_E712
+	.long _lab_E71A
+	.long _lab_E722
+	.long _lab_E72A
+	.long _lab_E732
+	.long _lab_E73A
+	.long _lab_E742
+	.long _lab_E74A
+	.long _lab_E752
+	.long _lab_E75A
+	.long _lab_E762
+	.long _lab_E76A
+	.long _lab_E772
+	.long _lab_E77A
+	.long _lab_E782
+	.long _lab_E78A
+	.long _lab_E792
+	.long _lab_E79A
+	.long _lab_E7A2
+	.long _lab_E7AA
+	.long _lab_E7B2
+	.long _lab_E7BA
+	.long _lab_E7C2
+	.long _lab_E7CA
+	.long _lab_E7D2
+	.long _lab_E7DA
+	.long _lab_E7E2
+	.long _lab_E7EA
+	.long _lab_E7F8
+	.long _lab_E800
+	.long _lab_E812
+	.long _lab_E828
+	.long _lab_E830
+	.long _lab_E838
+	.long _lab_E840
+	.long _lab_E848
+	.long _lab_E850
+	.long _lab_E85C
+	.long _lab_E868
+	.long _lab_E874
+	.long _lab_E880
+	.long _lab_E88C
+	.long _lab_E894
+	.long _lab_E89C
+	.long _lab_E8A4
+	.long _lab_E8AC
+	.long _lab_E8B4
+	.long _lab_E8BC
+	.long _lab_E8C4
+	.long _lab_E8CC
+	.long _lab_E8D4
+	.long _lab_E8DC
+	.long _lab_E8E4
+	.long _lab_E8EC
+	.long _lab_E8F4
+	.long _lab_E8FC
+	.long _lab_E904
+	.long _lab_E90C
+	.long _lab_E914
+	.long _lab_E91C
+	.long _lab_E924
+	.long _lab_E92C
+	.long _lab_E934
+	.long _lab_E93C
+	.long _lab_E944
+	.long _lab_E94C
+	.long _lab_E954
+	.long _lab_E95C
+	.long _lab_E964
+	.long _lab_E96C
+	.long _lab_E974
+	.long _lab_E97C
+	.long _lab_E984
+	.long _lab_E98C
+	.long _lab_E994
+	.long _lab_E99C
+	.long _lab_E9A4
+	.long _lab_E9AC
+	.long _lab_E9B4
+	.long _lab_E9BC
+	.long _lab_E9C4
+	.long _lab_E9CC
+	.long _lab_E9D4
+	.long _lab_E9DC
+	.long _lab_E9E4
+	.long _lab_E9EC
+	.long _lab_E9F4
+	.long _lab_E9FC
+	.long _lab_EA04
+	.long _lab_EA0C
+	.long _lab_EA14
+	.long _lab_EA1C
+	.long _lab_EA24
+	.long _lab_EA2C
+	.long _lab_EA34
+	.long _lab_EA3C
+	.long _lab_EA44
+	.long _lab_EA4C
+	.long _lab_EA54
+	.long _lab_EA5C
+	.long _lab_EA64
+	.long _lab_EA80
+	.long _lab_EA9C
+	.long _lab_EAB8
+	.long _lab_EAD4
+	.long _lab_EAF0
+	.long _lab_EB0C
+	.long _lab_EB14
+	.long _lab_EB1C
+	.long _lab_EB24
+	.long _lab_EB2C
+	.long _lab_EB34
+	.long _lab_EB3C
+	.long _lab_EB44
+	.long _lab_EB4C
+	.long _lab_EB54
+	.long _lab_EB5C
+	.long _lab_EB64
+	.long _lab_EB6C
+	.long _lab_EB74
+	.long _lab_EB7C
+	.long _lab_EB84
+	.long _lab_EB8C
+	.long _lab_EB94
+	.long _lab_EB9C
+	.long _lab_EBA4
+	.long _lab_EBAC
+	.long _lab_EBB4
+	.long _lab_EBBC
+	.long _lab_EBC4
+	.long _lab_EBCC
+	.long _lab_EBD4
+	.long _lab_EBDC
+	.long _lab_EBE4
+	.long _lab_EBEC
+	.long _lab_EBF4
+	.long _lab_EBFC
+	.long _lab_EC04
+	.long _lab_EC0C
+	.long _lab_EC14
+	.long _lab_EC1C
+	.long _lab_EC24
+	.long _lab_EC2C
+	.long _lab_EC74
+	.long _lab_ECBC
+	.long _lab_ECD2
+	.long _lab_ECDA
+	.long _lab_ECE2
+	.long _lab_ECEA
+	.long _lab_ECF2
+	.long _lab_ECFA
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED02
+	.long _lab_ED0A
+	.long _lab_ED12
+	.long _lab_ED1A
+	.long _lab_ED22
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+	.long _lab_ED2A
+
+_lab_E44A:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0001
+	.word 0xFF00
+_lab_E452:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0009
+	.word 0xFF00
+_lab_E45A:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0011
+	.word 0xFF00
+_lab_E462:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0019
+	.word 0xFF00
+_lab_E46A:
+	.word 0x2000
+	.word 0x0823
+	.word 0x0821
+	.word 0xFF00
+_lab_E472:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0027
+	.word 0xFF00
+_lab_E47A:
+	.word 0x2000
+	.word 0x0024
+	.word 0x002F
+	.word 0xFF00
+_lab_E482:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0037
+	.word 0xFF00
+_lab_E48A:
+	.word 0x2000
+	.word 0x0024
+	.word 0x003F
+	.word 0xFF00
+_lab_E492:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0047
+	.word 0xFF00
+_lab_E49A:
+	.word 0x2000
+	.word 0x0034
+	.word 0x004F
+	.word 0xFF00
+_lab_E4A2:
+	.word 0x2000
+	.word 0x0034
+	.word 0x005B
+	.word 0xFF00
+_lab_E4AA:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0801
+	.word 0xFF00
+_lab_E4B2:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0809
+	.word 0xFF00
+_lab_E4BA:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0811
+	.word 0xFF00
+_lab_E4C2:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0819
+	.word 0xFF00
+_lab_E4CA:
+	.word 0x2000
+	.word 0x0823
+	.word 0x0021
+	.word 0xFF00
+_lab_E4D2:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0827
+	.word 0xFF00
+_lab_E4DA:
+	.word 0x2000
+	.word 0x0024
+	.word 0x082F
+	.word 0xFF00
+_lab_E4E2:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0837
+	.word 0xFF00
+_lab_E4EA:
+	.word 0x2000
+	.word 0x0024
+	.word 0x083F
+	.word 0xFF00
+_lab_E4F2:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0847
+	.word 0xFF00
+_lab_E4FA:
+	.word 0x2000
+	.word 0x0034
+	.word 0x084F
+	.word 0xFF00
+_lab_E502:
+	.word 0x2000
+	.word 0x0034
+	.word 0x085B
+	.word 0xFF00
+_lab_E50A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0216
+	.word 0xFF00
+_lab_E512:
+	.word 0x0000
+	.word 0x0011
+	.word 0x020D
+	.word 0xFF00
+_lab_E51A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x020E
+	.word 0xFF00
+_lab_E522:
+	.word 0x0000
+	.word 0x0011
+	.word 0x020F
+	.word 0xFF00
+_lab_E52A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0210
+	.word 0xFF00
+_lab_E532:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0211
+	.word 0xFF00
+_lab_E53A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0212
+	.word 0xFF00
+_lab_E542:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0213
+	.word 0xFF00
+_lab_E54A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0214
+	.word 0xFF00
+_lab_E552:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0215
+	.word 0xFF00
+_lab_E55A:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0217
+	.word 0xFF00
+_lab_E562:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0001
+	.word 0xFF00
+_lab_E56A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0007
+	.word 0xFF00
+_lab_E572:
+	.word 0x2000
+	.word 0x0023
+	.word 0x000D
+	.word 0xFF00
+_lab_E57A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0013
+	.word 0xFF00
+_lab_E582:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0019
+	.word 0xFF00
+_lab_E58A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x001F
+	.word 0xFF00
+_lab_E592:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0025
+	.word 0xFF00
+_lab_E59A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x002B
+	.word 0xFF00
+_lab_E5A2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0031
+	.word 0xFF00
+_lab_E5AA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0037
+	.word 0xFF00
+_lab_E5B2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x003D
+	.word 0xFF00
+_lab_E5BA:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0043
+	.word 0xFF00
+_lab_E5C2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0801
+	.word 0xFF00
+_lab_E5CA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0807
+	.word 0xFF00
+_lab_E5D2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x080D
+	.word 0xFF00
+_lab_E5DA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0813
+	.word 0xFF00
+_lab_E5E2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0819
+	.word 0xFF00
+_lab_E5EA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x081F
+	.word 0xFF00
+_lab_E5F2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0825
+	.word 0xFF00
+_lab_E5FA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x082B
+	.word 0xFF00
+_lab_E602:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0831
+	.word 0xFF00
+_lab_E60A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0837
+	.word 0xFF00
+_lab_E612:
+	.word 0x2000
+	.word 0x0023
+	.word 0x083D
+	.word 0xFF00
+_lab_E61A:
+	.word 0x2000
+	.word 0x0024
+	.word 0x0843
+	.word 0xFF00
+_lab_E622:
+	.word 0x2000
+	.word 0x0022
+	.word 0x248A
+	.word 0xFF00
+_lab_E62A:
+	.word 0x2000
+	.word 0x0022
+	.word 0x248E
+	.word 0xFF00
+_lab_E632:
+	.word 0x2000
+	.word 0x0022
+	.word 0x2492
+	.word 0xFF00
+_lab_E63A:
+	.word 0x2000
+	.word 0x0011
+	.word 0x248E
+	.word 0xFF00
+_lab_E642:
+	.word 0x2000
+	.word 0x0032
+	.word 0x0130
+	.word 0xFF00
+_lab_E64A:
+	.word 0x2000
+	.word 0x0032
+	.word 0x0136
+	.word 0xFF00
+_lab_E652:
+	.word 0x2000
+	.word 0x0032
+	.word 0x013C
+	.word 0xFF00
+_lab_E65A:
+	.word 0x2000
+	.word 0x0032
+	.word 0x0142
+	.word 0xFF00
+_lab_E662:
+	.word 0x2000
+	.word 0x0032
+	.word 0x0148
+	.word 0xFF00
+_lab_E66A:
+	.word 0x2000
+	.word 0x0022
+	.word 0x014E
+	.word 0xFF00
+_lab_E672:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0156
+	.word 0xFF00
+_lab_E67A:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0152
+	.word 0xFF00
+_lab_E682:
+	.word 0x2000
+	.word 0x0022
+	.word 0x01A5
+	.word 0xFF00
+_lab_E68A:
+	.word 0x2000
+	.word 0x0011
+	.word 0x015A
+	.word 0xFF00
+_lab_E692:
+	.word 0x2000
+	.word 0x0011
+	.word 0x015B
+	.word 0xFF00
+_lab_E69A:
+	.word 0x2000
+	.word 0x0011
+	.word 0x015C
+	.word 0xFF00
+_lab_E6A2:
+	.word 0x2000
+	.word 0x0011
+	.word 0x015D
+	.word 0xFF00
+_lab_E6AA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6067
+	.word 0xFF00
+_lab_E6B2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x606D
+	.word 0xFF00
+_lab_E6BA:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6073
+	.word 0xFF00
+_lab_E6C2:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6077
+	.word 0xFF00
+_lab_E6CA:
+	.word 0x2000
+	.word 0x0822
+	.word 0x607B
+	.word 0xFF00
+_lab_E6D2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x607F
+	.word 0xFF00
+_lab_E6DA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6085
+	.word 0xFF00
+_lab_E6E2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x608B
+	.word 0xFF00
+_lab_E6EA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6091
+	.word 0xFF00
+_lab_E6F2:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6097
+	.word 0xFF00
+_lab_E6FA:
+	.word 0x2000
+	.word 0x0822
+	.word 0x609B
+	.word 0xFF00
+_lab_E702:
+	.word 0x2000
+	.word 0x0822
+	.word 0x609F
+	.word 0xFF00
+_lab_E70A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x60A3
+	.word 0xFF00
+_lab_E712:
+	.word 0x2000
+	.word 0x0023
+	.word 0x60A9
+	.word 0xFF00
+_lab_E71A:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60AF
+	.word 0xFF00
+_lab_E722:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60B3
+	.word 0xFF00
+_lab_E72A:
+	.word 0x2000
+	.word 0x0821
+	.word 0x60B7
+	.word 0xFF00
+_lab_E732:
+	.word 0x2000
+	.word 0x0023
+	.word 0x60B9
+	.word 0xFF00
+_lab_E73A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x60BF
+	.word 0xFF00
+_lab_E742:
+	.word 0x2000
+	.word 0x0011
+	.word 0x60C5
+	.word 0xFF00
+_lab_E74A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6867
+	.word 0xFF00
+_lab_E752:
+	.word 0x2000
+	.word 0x0023
+	.word 0x686D
+	.word 0xFF00
+_lab_E75A:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6873
+	.word 0xFF00
+_lab_E762:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6877
+	.word 0xFF00
+_lab_E76A:
+	.word 0x2000
+	.word 0x0822
+	.word 0x687B
+	.word 0xFF00
+_lab_E772:
+	.word 0x2000
+	.word 0x0023
+	.word 0x687F
+	.word 0xFF00
+_lab_E77A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6885
+	.word 0xFF00
+_lab_E782:
+	.word 0x2000
+	.word 0x0023
+	.word 0x688B
+	.word 0xFF00
+_lab_E78A:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6891
+	.word 0xFF00
+_lab_E792:
+	.word 0x2000
+	.word 0x0822
+	.word 0x6897
+	.word 0xFF00
+_lab_E79A:
+	.word 0x2000
+	.word 0x0822
+	.word 0x689B
+	.word 0xFF00
+_lab_E7A2:
+	.word 0x2000
+	.word 0x0822
+	.word 0x689F
+	.word 0xFF00
+_lab_E7AA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x68A3
+	.word 0xFF00
+_lab_E7B2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x68A9
+	.word 0xFF00
+_lab_E7BA:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68AF
+	.word 0xFF00
+_lab_E7C2:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68B3
+	.word 0xFF00
+_lab_E7CA:
+	.word 0x2000
+	.word 0x0821
+	.word 0x68B7
+	.word 0xFF00
+_lab_E7D2:
+	.word 0x2000
+	.word 0x0023
+	.word 0x68B9
+	.word 0xFF00
+_lab_E7DA:
+	.word 0x2000
+	.word 0x0023
+	.word 0x68BF
+	.word 0xFF00
+_lab_E7E2:
+	.word 0x2000
+	.word 0x0011
+	.word 0x68C5
+	.word 0xFF00
+_lab_E7EA:
+	.word 0x2000
+	.word 0x0041
+	.word 0x019F
+	.word 0xFF20
+	.word 0x0021
+	.word 0x01A3
+	.word 0xFF00
+_lab_E7F8:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0218
+	.word 0xFF00
+_lab_E800:
+	.word 0x2000
+	.word 0x0011
+	.word 0x020E
+	.word 0x0800
+	.word 0x1102
+	.word 0x1610
+	.word 0x0011
+	.word 0x0216
+	.word 0xFF00
+_lab_E812:
+	.word 0x2000
+	.word 0x0011
+	.word 0x020D
+	.word 0x0800
+	.word 0x1102
+	.word 0x1610
+	.word 0x0011
+	.word 0x0216
+	.word 0x1800
+	.word 0x1102
+	.word 0x16FF
+_lab_E828:
+	.word 0x2000
+	.word 0x0023
+	.word 0x016A
+	.word 0xFF00
+_lab_E830:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0170
+	.word 0xFF00
+_lab_E838:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0176
+	.word 0xFF00
+_lab_E840:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0197
+	.word 0xFF00
+_lab_E848:
+	.word 0x2000
+	.word 0x0022
+	.word 0x019B
+	.word 0xFF00
+_lab_E850:
+	.word 0x2000
+	.word 0x0021
+	.word 0x6067
+	.word 0xF808
+	.word 0x4460
+	.word 0x69FF
+_lab_E85C:
+	.word 0x2000
+	.word 0x0021
+	.word 0x6079
+	.word 0xF808
+	.word 0x4460
+	.word 0x7BFF
+_lab_E868:
+	.word 0x2000
+	.word 0x0021
+	.word 0x608B
+	.word 0xF808
+	.word 0x4460
+	.word 0x8DFF
+_lab_E874:
+	.word 0x2000
+	.word 0x0031
+	.word 0x609D
+	.word 0x0008
+	.word 0x4460
+	.word 0xA0FF
+_lab_E880:
+	.word 0x2000
+	.word 0x0021
+	.word 0x60B0
+	.word 0xF808
+	.word 0x4460
+	.word 0xB2FF
+_lab_E88C:
+	.word 0x2000
+	.word 0x0032
+	.word 0x60C2
+	.word 0xFF00
+_lab_E894:
+	.word 0x2000
+	.word 0x0032
+	.word 0x60C8
+	.word 0xFF00
+_lab_E89C:
+	.word 0x2000
+	.word 0x0032
+	.word 0x60D0
+	.word 0xFF00
+_lab_E8A4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60D6
+	.word 0xFF00
+_lab_E8AC:
+	.word 0x2000
+	.word 0x0024
+	.word 0x60DA
+	.word 0xFF00
+_lab_E8B4:
+	.word 0x2000
+	.word 0x0023
+	.word 0x015E
+	.word 0xFF00
+_lab_E8BC:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0164
+	.word 0xFF00
+_lab_E8C4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60C6
+	.word 0xFF00
+_lab_E8CC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60CA
+	.word 0xFF00
+_lab_E8D4:
+	.word 0x2000
+	.word 0x0023
+	.word 0x60D0
+	.word 0xFF00
+_lab_E8DC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60D6
+	.word 0xFF00
+_lab_E8E4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60DA
+	.word 0xFF00
+_lab_E8EC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60DE
+	.word 0xFF00
+_lab_E8F4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60E2
+	.word 0xFF00
+_lab_E8FC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60E6
+	.word 0xFF00
+_lab_E904:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60EA
+	.word 0xFF00
+_lab_E90C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60EE
+	.word 0xFF00
+_lab_E914:
+	.word 0x2000
+	.word 0x0022
+	.word 0x60F2
+	.word 0xFF00
+_lab_E91C:
+	.word 0x2000
+	.word 0x0032
+	.word 0x60F6
+	.word 0xFF00
+_lab_E924:
+	.word 0x2000
+	.word 0x0032
+	.word 0x60FC
+	.word 0xFF00
+_lab_E92C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6102
+	.word 0xFF00
+_lab_E934:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6106
+	.word 0xFF00
+_lab_E93C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x610A
+	.word 0xFF00
+_lab_E944:
+	.word 0x2000
+	.word 0x0023
+	.word 0x610E
+	.word 0xFF00
+_lab_E94C:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6114
+	.word 0xFF00
+_lab_E954:
+	.word 0x2000
+	.word 0x0023
+	.word 0x611A
+	.word 0xFF00
+_lab_E95C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6120
+	.word 0xFF00
+_lab_E964:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6124
+	.word 0xFF00
+_lab_E96C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6128
+	.word 0xFF00
+_lab_E974:
+	.word 0x2000
+	.word 0x0022
+	.word 0x612C
+	.word 0xFF00
+_lab_E97C:
+	.word 0x2000
+	.word 0x0023
+	.word 0x0496
+	.word 0xFF00
+_lab_E984:
+	.word 0x2000
+	.word 0x0023
+	.word 0x049C
+	.word 0xFF00
+_lab_E98C:
+	.word 0x2000
+	.word 0x0023
+	.word 0x04A2
+	.word 0xFF00
+_lab_E994:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68E6
+	.word 0xFF00
+_lab_E99C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68EA
+	.word 0xFF00
+_lab_E9A4:
+	.word 0x2000
+	.word 0x1022
+	.word 0x70D6
+	.word 0xFF00
+_lab_E9AC:
+	.word 0x2000
+	.word 0x0024
+	.word 0x70DA
+	.word 0xFF00
+_lab_E9B4:
+	.word 0x2000
+	.word 0x0023
+	.word 0x690E
+	.word 0xFF00
+_lab_E9BC:
+	.word 0x2000
+	.word 0x0023
+	.word 0x6914
+	.word 0xFF00
+_lab_E9C4:
+	.word 0x2000
+	.word 0x0011
+	.word 0x6441
+	.word 0xFF00
+_lab_E9CC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0072
+	.word 0xFF00
+_lab_E9D4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0076
+	.word 0xFF00
+_lab_E9DC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x007A
+	.word 0xFF00
+_lab_E9E4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x007E
+	.word 0xFF00
+_lab_E9EC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0082
+	.word 0xFF00
+_lab_E9F4:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0086
+	.word 0xFF00
+_lab_E9FC:
+	.word 0x2000
+	.word 0x0022
+	.word 0x008A
+	.word 0xFF00
+_lab_EA04:
+	.word 0x2000
+	.word 0x0022
+	.word 0x008E
+	.word 0xFF00
+_lab_EA0C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0092
+	.word 0xFF00
+_lab_EA14:
+	.word 0x2000
+	.word 0x0022
+	.word 0x0096
+	.word 0xFF00
+_lab_EA1C:
+	.word 0x2000
+	.word 0x0032
+	.word 0x68F6
+	.word 0xFF00
+_lab_EA24:
+	.word 0x2000
+	.word 0x0022
+	.word 0x6902
+	.word 0xFF00
+_lab_EA2C:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68DE
+	.word 0xFF00
+_lab_EA34:
+	.word 0x2000
+	.word 0x0022
+	.word 0x68E2
+	.word 0xFF00
+_lab_EA3C:
+	.word 0x2000
+	.word 0x0024
+	.word 0x64A8
+	.word 0xFF00
+_lab_EA44:
+	.word 0x2000
+	.word 0x0024
+	.word 0x64B0
+	.word 0xFF00
+_lab_EA4C:
+	.word 0x2000
+	.word 0x0024
+	.word 0x64B8
+	.word 0xFF00
+_lab_EA54:
+	.word 0x2000
+	.word 0x0011
+	.word 0x64C0
+	.word 0xFF00
+_lab_EA5C:
+	.word 0x2000
+	.word 0x0011
+	.word 0x64C1
+	.word 0xFF00
+_lab_EA64:
+	.word 0x2000
+	.word 0x0011
+	.word 0x022B
+	.word 0x0800
+	.word 0x1102
+	.word 0x1C10
+	.word 0x0011
+	.word 0x0230
+	.word 0x1800
+	.word 0x1102
+	.word 0x2E20
+	.word 0x0011
+	.word 0x0220
+	.word 0xFF00
+_lab_EA80:
+	.word 0x2000
+	.word 0xFC11
+	.word 0x022B
+	.word 0x0800
+	.word 0x1102
+	.word 0x1C10
+	.word 0x0011
+	.word 0x0230
+	.word 0x1800
+	.word 0x1102
+	.word 0x2E20
+	.word 0x0011
+	.word 0x0220
+	.word 0xFF00
+_lab_EA9C:
+	.word 0x2000
+	.word 0x0011
+	.word 0x022B
+	.word 0x08FC
+	.word 0x1102
+	.word 0x1C10
+	.word 0x0011
+	.word 0x0230
+	.word 0x1800
+	.word 0x1102
+	.word 0x2E20
+	.word 0x0011
+	.word 0x0220
+	.word 0xFF00
+_lab_EAB8:
+	.word 0x2000
+	.word 0x0011
+	.word 0x022B
+	.word 0x0800
+	.word 0x1102
+	.word 0x1C10
+	.word 0xFC11
+	.word 0x0230
+	.word 0x1800
+	.word 0x1102
+	.word 0x2E20
+	.word 0x0011
+	.word 0x0220
+	.word 0xFF00
+_lab_EAD4:
+	.word 0x2000
+	.word 0x0011
+	.word 0x022B
+	.word 0x0800
+	.word 0x1102
+	.word 0x1C10
+	.word 0x0011
+	.word 0x0230
+	.word 0x18FC
+	.word 0x1102
+	.word 0x2E20
+	.word 0x0011
+	.word 0x0220
+	.word 0xFF00
+_lab_EAF0:
+	.word 0x2000
+	.word 0x0011
+	.word 0x022B
+	.word 0x0800
+	.word 0x1102
+	.word 0x1C10
+	.word 0x0011
+	.word 0x0230
+	.word 0x1800
+	.word 0x1102
+	.word 0x2E20
+	.word 0xFC11
+	.word 0x0220
+	.word 0xFF00
+_lab_EB0C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0001
+	.word 0xFF00
+_lab_EB14:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x000D
+	.word 0xFF00
+_lab_EB1C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0019
+	.word 0xFF00
+_lab_EB24:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0025
+	.word 0xFF00
+_lab_EB2C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0031
+	.word 0xFF00
+_lab_EB34:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x003D
+	.word 0xFF00
+_lab_EB3C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0049
+	.word 0xFF00
+_lab_EB44:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0055
+	.word 0xFF00
+_lab_EB4C:
+	.word 0x20FC
+	.word 0x0833
+	.word 0x04C2
+	.word 0xFF00
+_lab_EB54:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x04CB
+	.word 0xFF00
+_lab_EB5C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x04D7
+	.word 0xFF00
+_lab_EB64:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x04E3
+	.word 0xFF00
+_lab_EB6C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x04EF
+	.word 0xFF00
+_lab_EB74:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0801
+	.word 0xFF00
+_lab_EB7C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x080D
+	.word 0xFF00
+_lab_EB84:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0819
+	.word 0xFF00
+_lab_EB8C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0825
+	.word 0xFF00
+_lab_EB94:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0831
+	.word 0xFF00
+_lab_EB9C:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x083D
+	.word 0xFF00
+_lab_EBA4:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0849
+	.word 0xFF00
+_lab_EBAC:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0855
+	.word 0xFF00
+_lab_EBB4:
+	.word 0x20FC
+	.word 0x0833
+	.word 0x0CC2
+	.word 0xFF00
+_lab_EBBC:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0CCB
+	.word 0xFF00
+_lab_EBC4:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0CD7
+	.word 0xFF00
+_lab_EBCC:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0CE3
+	.word 0xFF00
+_lab_EBD4:
+	.word 0x20FC
+	.word 0x0034
+	.word 0x0CEF
+	.word 0xFF00
+_lab_EBDC:
+	.word 0x0000
+	.word 0x0011
+	.word 0x013D
+	.word 0xFF00
+_lab_EBE4:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0134
+	.word 0xFF00
+_lab_EBEC:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0135
+	.word 0xFF00
+_lab_EBF4:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0136
+	.word 0xFF00
+_lab_EBFC:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0137
+	.word 0xFF00
+_lab_EC04:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0138
+	.word 0xFF00
+_lab_EC0C:
+	.word 0x0000
+	.word 0x0011
+	.word 0x0139
+	.word 0xFF00
+_lab_EC14:
+	.word 0x0000
+	.word 0x0011
+	.word 0x013A
+	.word 0xFF00
+_lab_EC1C:
+	.word 0x0000
+	.word 0x0011
+	.word 0x013B
+	.word 0xFF00
+_lab_EC24:
+	.word 0x0000
+	.word 0x0011
+	.word 0x013C
+	.word 0xFF00
+_lab_EC2C:
+	.word 0x2000
+	.word 0x1044
+	.word 0x01A3
+	.word 0x0830
+	.word 0x3401
+	.word 0xB308
+	.word 0x5033
+	.word 0x01BF
+	.word 0x1808
+	.word 0x1101
+	.word 0xC820
+	.word 0x0044
+	.word 0x01C9
+	.word 0x2020
+	.word 0x4401
+	.word 0xD920
+	.word 0x4044
+	.word 0x01E9
+	.word 0x2060
+	.word 0x4201
+	.word 0xF940
+	.word 0x0012
+	.word 0x0201
+	.word 0x4010
+	.word 0x3402
+	.word 0x0340
+	.word 0x3034
+	.word 0x020F
+	.word 0x4050
+	.word 0x3202
+	.word 0x1B58
+	.word 0x1023
+	.word 0x0221
+	.word 0x5840
+	.word 0x1302
+	.word 0x27FF
+_lab_EC74:
+	.word 0x2000
+	.word 0x1044
+	.word 0x022A
+	.word 0x0830
+	.word 0x3402
+	.word 0x3A08
+	.word 0x5033
+	.word 0x0246
+	.word 0x1808
+	.word 0x1102
+	.word 0x4F20
+	.word 0x0044
+	.word 0x0250
+	.word 0x2020
+	.word 0x4402
+	.word 0x6020
+	.word 0x4044
+	.word 0x0270
+	.word 0x2060
+	.word 0x4202
+	.word 0x8040
+	.word 0x0012
+	.word 0x0288
+	.word 0x4010
+	.word 0x3402
+	.word 0x8A40
+	.word 0x3034
+	.word 0x0296
+	.word 0x4050
+	.word 0x3202
+	.word 0xA258
+	.word 0x1023
+	.word 0x02A8
+	.word 0x5840
+	.word 0x1302
+	.word 0xAEFF
+_lab_ECBC:
+	.word 0x2000
+	.word 0x0041
+	.word 0x4192
+	.word 0x2000
+	.word 0x4141
+	.word 0x9640
+	.word 0x0041
+	.word 0x419A
+	.word 0x6000
+	.word 0x4141
+	.word 0x9EFF
+_lab_ECD2:
+	.word 0x0000
+	.word 0x0011
+	.word 0x41A2
+	.word 0xFF00
+_lab_ECDA:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0001
+	.word 0xFF00
+_lab_ECE2:
+	.word 0x0000
+	.word 0x0034
+	.word 0x000D
+	.word 0xFF00
+_lab_ECEA:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0019
+	.word 0xFF00
+_lab_ECF2:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0025
+	.word 0xFF00
+_lab_ECFA:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0031
+	.word 0xFF00
+_lab_ED02:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0801
+	.word 0xFF00
+_lab_ED0A:
+	.word 0x0000
+	.word 0x0034
+	.word 0x080D
+	.word 0xFF00
+_lab_ED12:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0819
+	.word 0xFF00
+_lab_ED1A:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0825
+	.word 0xFF00
+_lab_ED22:
+	.word 0x0000
+	.word 0x0034
+	.word 0x0831
+	.word 0xFF00
+_lab_ED2A:
+	; unfinished
